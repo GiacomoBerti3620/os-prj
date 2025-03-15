@@ -1,7 +1,14 @@
-obj-m += echodev-drv.o
+obj-m := osprj.o
+
+SRC := $(shell pwd)
 
 all:
-	make -C ../linux-6.1.58 M=$(PWD) modules
+    $(MAKE) -C $(KERNEL_SRC) M=$(SRC)
+
+modules_install:
+    $(MAKE) -C $(KERNEL_SRC) M=$(SRC) modules_install
 
 clean:
-	make -C ../linux-6.1.58 M=$(PWD) clean
+    rm -f *.o *~ core .depend .*.cmd *.ko *.mod.c
+    rm -f Module.markers Module.symvers modules.order
+    rm -rf .tmp_versions Modules.symvers
