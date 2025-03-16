@@ -9,7 +9,7 @@ SRC_URI = "file://Makefile \
            file://echodev-cmd.h \
           "
 
-S = "${WORKDIR}/sources"
+S = "${WORKDIR}"
 UNPACKDIR = "${S}"
 
 # The inherit of module.bbclass will automatically name module packages with
