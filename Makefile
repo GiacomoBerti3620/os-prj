@@ -1,4 +1,4 @@
-obj-m := osprj.o
+obj-m := echodev-drv.o
 
 SRC := $(shell pwd)
 
