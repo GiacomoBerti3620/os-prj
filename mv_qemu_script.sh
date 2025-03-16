@@ -1,5 +1,5 @@
 #!/bin/bash
 
-cp pci-echodev.c ../qemu/misc/
-cp kconfig ../qemu/misc/
-cp meson.build ../qemu/misc/
+cp pci-echodev.c ../qemu/hw/misc/
+cp kconfig ../qemu/hw/misc/
+cp meson.build ../qemu/hw/misc/
