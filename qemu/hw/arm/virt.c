@@ -45,3 +45,64 @@ static const int a15irqmap[] = {
 
 // >>>>> ROBA <<<<<
 
+static void create_virtio_devices(const VirtMachineState *vms)
+{
+    int i;
+    hwaddr size = vms->memmap[VIRT_MMIO].size;
+    MachineState *ms = MACHINE(vms);
+
+
+    // >>>>> ROBA <<<<<
+
+}
+
+static void create_virt_fft_acc_device(const VirtMachineState *vms)
+{
+    hwaddr base = vms->memmap[VIRT_FFT_ACC].base;
+    hwaddr size = vms->memmap[VIRT_FFT_ACC].size;
+    int irq = vms->irqmap[VIRT_FFT_ACC];
+    char *nodename;
+
+    sysbus_create_simple("virt-fft-acc", base, qdev_get_gpio_in(vms->gic, irq));
+
+    nodename = g_strdup_printf("/virt_fft_acc@%" PRIx64, base);
+    qemu_fdt_add_subnode(vms->fdt, nodename);
+    qemu_fdt_setprop_string(vms->fdt, nodename, "compatible", "virt-fft-acc");
+    qemu_fdt_setprop_sized_cells(vms->fdt, nodename, "reg", 2, base, 2, size);
+    qemu_fdt_setprop_cells(vms->fdt, nodename, "interrupt-parent",
+                           vms->gic_phandle);
+    qemu_fdt_setprop_cells(vms->fdt, nodename, "interrupts",
+                           GIC_FDT_IRQ_TYPE_SPI, irq,
+                           GIC_FDT_IRQ_FLAGS_LEVEL_HI);
+
+    g_free(nodename);
+}
+
+// >>>>> ROBA <<<<<
+
+static void machvirt_init(MachineState *machine)
+{
+    
+    // >>>>> ROBA <<<<<
+
+    /* Create mmio transports, so the user can create virtio backends
+     * (which will be automatically plugged in to the transports). If
+     * no backend is created the transport will just sit harmlessly idle.
+     */
+    create_virtio_devices(vms);
+
+
+    // ADD CUSTOM FFT ACC DEVICE
+    create_virt_fft_acc_device(vms);
+
+
+    vms->fw_cfg = create_fw_cfg(vms, &address_space_memory);
+    rom_set_fw(vms->fw_cfg);
+
+    create_platform_bus(vms);
+
+    // >>>>> ROBA <<<<<
+
+}
+
+// >>>>> ROBA <<<<<

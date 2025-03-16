@@ -1,0 +1,102 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Constants
+sampling_rate = 1000  # Hz (samples per second)
+duration = 1.024      # seconds
+freq1 = 10            # Hz
+freq2 = 25            # Hz
+amplitude = 127.5     # Amplitude to scale the waveform between 0 and 255
+offset = 127.5        # Offset to center waveform around 127.5 (half of 255)
+min_value = 0         # Minimum value (0)
+max_value = 255       # Maximum value (255)
+
+# Generate time values
+t = np.linspace(0, duration, int(sampling_rate * duration), endpoint=False)
+
+# Generate sine waves
+wave1 = np.sin(2 * np.pi * freq1 * t)
+wave2 = np.sin(2 * np.pi * freq2 * t)
+
+# Compose the waves
+composed_wave = wave1 + wave2
+
+# Scale to range [0, 255] without clipping
+# Find the min and max values in the composed wave
+composed_wave_min = np.min(composed_wave)
+composed_wave_max = np.max(composed_wave)
+ 
+# Scale the composed wave to [0, 255] range
+scaled_wave = (composed_wave - composed_wave_min) / (composed_wave_max - composed_wave_min)
+scaled_wave = scaled_wave * (max_value - min_value) + min_value
+
+# Convert to integer values
+samples = np.round(scaled_wave).astype(int)
+
+# Dump as C integer vector
+def dump_as_c_vector(samples):
+    print("static int wave_samples[] = {")
+    for i, sample in enumerate(samples):
+        if i != len(samples) - 1:
+            print(f"{sample}, ", end="")
+        else:
+            print(f"{sample}", end="")
+    print("\n};")
+
+# Function to read the integer array from a file
+def read_samples_from_file(filename):
+    with open(filename, 'r') as file:
+        content = file.read()
+        # Assuming the array is a standard C array and formatted correctly
+        start = content.find("{") + 1
+        end = content.find("}")
+        array_string = content[start:end]
+        # Convert the comma-separated values to a list of integers
+        samples = list(map(int, array_string.split(',')))
+        return samples
+
+# Plot the original and composed waves
+def plot_waveforms():
+    plt.figure(figsize=(12, 6))
+    
+    # Plot original sine waves
+    plt.subplot(2, 1, 1)
+    plt.plot(t, wave1, label="Sine Wave 1 (10 Hz)", color="blue")
+    plt.plot(t, wave2, label="Sine Wave 2 (25 Hz)", color="orange")
+    plt.title("Original Sine Waves")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Amplitude")
+    plt.legend()
+    
+    # Plot composed wave (normalized)
+    plt.subplot(2, 1, 2)
+    plt.plot(t, composed_wave_normalized, label="Composed Wave", color="green")
+    plt.title("Composed Wave (10 Hz + 25 Hz)")
+    plt.xlabel("Time (s)")
+    plt.ylabel("Amplitude (0 to 255)")
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+# Function to plot the integer samples read from a file
+def plot_samples_from_file(filename):
+    samples = read_samples_from_file(filename)
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(samples, label="Integer Samples from File", color="red")
+    plt.title(f"Integer Samples from {filename}")
+    plt.xlabel("Sample Index")
+    plt.ylabel("Amplitude (0 to 255)")
+    plt.legend()
+    plt.show()
+
+# Uncomment this to generate the wave and dump it as C vector
+dump_as_c_vector(samples)
+
+# Uncomment this to plot the original and composed waveforms
+plot_waveforms()
+
+# To read and plot the samples from a file
+# plot_samples_from_file("wave_samples.c")  # Replace with the actual path to your C file
+
