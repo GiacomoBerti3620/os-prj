@@ -1,6 +1,6 @@
 SUMMARY = "External Linux kernel module for OS project"
 DESCRIPTION = "${SUMMARY}"
-LICENSE = "CLOSE"
+LICENSE = "CLOSED"
 
 inherit module
 
