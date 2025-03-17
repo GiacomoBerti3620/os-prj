@@ -1,4 +1,4 @@
-obj-m := echodev-drv.o
+obj-m := echodev_drv.o
 
 SRC := $(shell pwd)
 
