@@ -86,7 +86,7 @@ typedef struct {
 // Cooley-Tukey based fft (https://it.wikipedia.org/wiki/Trasformata_di_Fourier_veloce)
 // Function to reorder the complex array based on the reverse index
 // Only real part is reordered since imaginary is just zeros
-void sort(int *f_real, int N) {
+static void sort(int *f_real, int N) {
     int f2_real[SAMPLES_COUNT_MAX];
 
     for(int i = 0; i < N; i++) {
@@ -107,7 +107,7 @@ void sort(int *f_real, int N) {
 }
 
 // Function to perform the Cooley-Tukey FFT
-void FFT(int *f_real, int *f_imag, int N) {
+static void FFT(int *f_real, int *f_imag, int N) {
     // Create real and imaginary vectors
     double W_real[SAMPLES_COUNT_MAX / 2 * sizeof(double)];
     double W_imag[SAMPLES_COUNT_MAX / 2 * sizeof(double)];
