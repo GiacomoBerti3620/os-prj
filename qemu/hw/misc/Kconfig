@@ -23,7 +23,6 @@ config ISA_TESTDEV
 config ISA_FFT_ACC
     bool
     default y if TEST_DEVICES
-    depends on ISA_BUS
 
 config PCI_TESTDEV
     bool
