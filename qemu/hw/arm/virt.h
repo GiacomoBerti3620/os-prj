@@ -1,0 +1,8 @@
+
+enum {
+    VIRT_FLASH,
+    VIRT_MEM,
+    VIRT_CPUPERIPHS,
+    VIRT_GIC_DIST,
+    VIRT_FFT_ACC
+};
