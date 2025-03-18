@@ -354,7 +354,7 @@ static void virt_fft_acc_write(void *opaque, hwaddr offset, uint64_t value,
         s->cfg = (int)value;
 
         // Set samples count
-        s->nSamples = 2**(((s->cfg & NSAMPLES_MASK) >> NSAMPLES_SH)+4);
+        s->nSamples = (uint16_t) pow(2, (double) (((s->cfg & NSAMPLES_MASK) >> NSAMPLES_SH)+4));
         break;
 
     case DATAIN:
