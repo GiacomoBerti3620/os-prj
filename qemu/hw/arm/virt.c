@@ -1287,6 +1287,8 @@ static void create_virtio_devices(const VirtMachineState *vms)
 
 static void create_virt_fft_acc_device(const VirtMachineState *vms)
 {
+    MachineState *ms = MACHINE(vms);
+
     hwaddr base = vms->memmap[VIRT_FFT_ACC].base;
     hwaddr size = vms->memmap[VIRT_FFT_ACC].size;
     int irq = vms->irqmap[VIRT_FFT_ACC];
@@ -1295,12 +1297,12 @@ static void create_virt_fft_acc_device(const VirtMachineState *vms)
     sysbus_create_simple("virt-fft-acc", base, qdev_get_gpio_in(vms->gic, irq));
 
     nodename = g_strdup_printf("/virt_fft_acc@%" PRIx64, base);
-    qemu_fdt_add_subnode(vms->fdt, nodename);
-    qemu_fdt_setprop_string(vms->fdt, nodename, "compatible", "virt-fft-acc");
-    qemu_fdt_setprop_sized_cells(vms->fdt, nodename, "reg", 2, base, 2, size);
-    qemu_fdt_setprop_cells(vms->fdt, nodename, "interrupt-parent",
+    qemu_fdt_add_subnode(ms->fdt, nodename);
+    qemu_fdt_setprop_string(ms->fdt, nodename, "compatible", "virt-fft-acc");
+    qemu_fdt_setprop_sized_cells(ms->fdt, nodename, "reg", 2, base, 2, size);
+    qemu_fdt_setprop_cells(ms->fdt, nodename, "interrupt-parent",
                            vms->gic_phandle);
-    qemu_fdt_setprop_cells(vms->fdt, nodename, "interrupts",
+    qemu_fdt_setprop_cells(ms->fdt, nodename, "interrupts",
                            GIC_FDT_IRQ_TYPE_SPI, irq,
                            GIC_FDT_IRQ_FLAGS_LEVEL_HI);
 
