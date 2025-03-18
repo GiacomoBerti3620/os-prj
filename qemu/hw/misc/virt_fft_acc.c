@@ -19,7 +19,7 @@
 #include "hw/irq.h" // For qemu_set_irq
 
 
-#define TYPE_VIRT_FFT_ACC          "virt-fft_acc"
+#define TYPE_VIRT_FFT_ACC          "virt-fft-acc"
 #define VIRT_FFT_ACC(obj)          OBJECT_CHECK(VirtFftAccState, (obj), TYPE_VIRT_FFT_ACC)
 
 /* Register map */

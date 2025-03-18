@@ -1,11 +1,6 @@
 /*
- * Virtual Foo Device Driver
+ * VIRTUAL FFT Accelerator Device
  *
- * Copyright 2017 Milo Kim <woogyom.kim@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
  */
 
 #include <linux/err.h>
@@ -18,66 +13,43 @@
 #include <linux/slab.h>
 #include <linux/sysfs.h>
 
-/* Register map */
-#define DEVID 0x000
-#define ID 0xfacecafe
+#define REG_ID            0x0
 
-#define CTRL 0x001
-#define EN_FIELD ((uint32_t)1U << 0)
-#define IEN_FIELD ((uint32_t)1U << 1)
-#define SAM_FIELD ((uint32_t)1U << 2)
-#define PRC_FIELD ((uint32_t)1U << 3)
+#define REG_INIT        0x4
+#define HW_ENABLE        BIT(0)
 
-#define CFG0 0x002
-#define SMODE_FIELD ((uint32_t)1U << 0)
-#define NSAMPLES_MASK 0x000e
-#define NSAMPLES_SH 0x1
+#define REG_CMD            0x8
 
-#define DATAIN 0x003
-#define DATAIN_H_MASK 0xff00
-#define DATAIN_H_SH 0x8
-#define DATAIN_L_MASK 0x00ff
-#define DATAIN_L_SH 0x0
+#define REG_INT_STATUS        0xc
+#define IRQ_ENABLED        BIT(0)
+#define IRQ_BUF_DEQ        BIT(1)
 
-#define DATAOUT 0x004
-
-#define STATUS 0x005
-#define READY_FIELD ((uint32_t)1U << 0)
-#define SCPLT_FIELD ((uint32_t)1U << 1)
-#define PCPLT_FIELD ((uint32_t)1U << 2)
-#define FULL_FIELD ((uint32_t)1U << 3)
-#define EMPTY_FIELD ((uint32_t)1U << 4)
-
-// Number of samples processed max (actual number set in NSAMPLES)
-#define SAMPLES_COUNT 2048
-
-struct virt_fft_acc
-{
+struct virt_foo {
     struct device *dev;
     void __iomem *base;
 };
 
 static ssize_t vf_show_id(struct device *dev,
-                          struct device_attribute *attr, char *buf)
+              struct device_attribute *attr, char *buf)
 {
     struct virt_foo *vf = dev_get_drvdata(dev);
-    u32 val = readl_relaxed(vf->base + DEVID);
+    u32 val = readl_relaxed(vf->base + REG_ID);
 
     return scnprintf(buf, PAGE_SIZE, "Chip ID: 0x%.x\\n", val);
 }
 
 static ssize_t vf_show_cmd(struct device *dev,
-                           struct device_attribute *attr, char *buf)
+               struct device_attribute *attr, char *buf)
 {
     struct virt_foo *vf = dev_get_drvdata(dev);
-    u32 val = readl_relaxed(vf->base + CTRL);
+    u32 val = readl_relaxed(vf->base + REG_CMD);
 
     return scnprintf(buf, PAGE_SIZE, "Command buffer: 0x%.x\\n", val);
 }
 
 static ssize_t vf_store_cmd(struct device *dev,
-                            struct device_attribute *attr,
-                            const char *buf, size_t len)
+                struct device_attribute *attr,
+                const char *buf, size_t len)
 {
     struct virt_foo *vf = dev_get_drvdata(dev);
     unsigned long val;
@@ -145,10 +117,9 @@ static int vf_probe(struct platform_device *pdev)
         return -EINVAL;
 
     res = platform_get_resource(pdev, IORESOURCE_IRQ, 0);
-    if (res)
-    {
+    if (res) {
         ret = devm_request_irq(dev, res->start, vf_irq_handler,
-                               IRQF_TRIGGER_HIGH, "vf_irq", vf);
+                       IRQF_TRIGGER_HIGH, "vf_irq", vf);
         if (ret)
             return ret;
     }
@@ -169,10 +140,9 @@ static int vf_remove(struct platform_device *pdev)
 }
 
 static const struct of_device_id vf_of_match[] = {
-    {
-        .compatible = "virt-foo",
-    },
-    {}};
+    { .compatible = "virt-foo", },
+    { }
+};
 MODULE_DEVICE_TABLE(of, vf_of_match);
 
 static struct platform_driver vf_driver = {
