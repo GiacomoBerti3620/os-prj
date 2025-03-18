@@ -16,6 +16,7 @@
 #include "hw/sysbus.h"
 #include "qemu/bitops.h"
 #include "qemu/log.h"
+#include "hw/irq.h" // For qemu_set_irq
 
 
 #define TYPE_VIRT_FFT_ACC          "virt-fft_acc"
