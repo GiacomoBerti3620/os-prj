@@ -379,7 +379,7 @@ static void virt_fft_acc_realize(DeviceState *d, Error **errp)
     SysBusDevice *sbd = SYS_BUS_DEVICE(d);
 
     memory_region_init_io(&s->iomem, OBJECT(s), &virt_fft_acc_ops, s,
-                          TYPE_VIRT_FFT_ACC, 0x100);
+                          TYPE_VIRT_FFT_ACC, 0x200);
     sysbus_init_mmio(sbd, &s->iomem);
     sysbus_init_irq(sbd, &s->irq);
 
