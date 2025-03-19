@@ -133,7 +133,7 @@ static int vfft_probe(struct platform_device *pdev)
 
     vfft_init(vf);
 
-    return sysfs_create_group(&dev->kobj, &vf_attr_group);
+    return sysfs_create_group(&dev->kobj, &vfft_attr_group);
 }
 
 static int vfft_remove(struct platform_device *pdev)
