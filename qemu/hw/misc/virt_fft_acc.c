@@ -18,46 +18,45 @@
 #include "qemu/log.h"
 #include "hw/irq.h" // For qemu_set_irq
 
-
-#define TYPE_VIRT_FFT_ACC          "virt-fft-acc"
-#define VIRT_FFT_ACC(obj)          OBJECT_CHECK(VirtFftAccState, (obj), TYPE_VIRT_FFT_ACC)
+#define TYPE_VIRT_FFT_ACC "virt-fft-acc"
+#define VIRT_FFT_ACC(obj) OBJECT_CHECK(VirtFftAccState, (obj), TYPE_VIRT_FFT_ACC)
 
 /* Register map */
-#define DEVID           0x000
-#define ID              0xfacecafe
+#define DEVID 0x000
+#define ID 0xfacecafe
 
-#define CTRL            0x001
-#define EN_FIELD        ((uint32_t)1U << 0)
-#define IEN_FIELD       ((uint32_t)1U << 1)
-#define SAM_FIELD       ((uint32_t)1U << 2)
-#define PRC_FIELD       ((uint32_t)1U << 3)
+#define CTRL 0x001
+#define EN_FIELD ((uint32_t)1U << 0)
+#define IEN_FIELD ((uint32_t)1U << 1)
+#define SAM_FIELD ((uint32_t)1U << 2)
+#define PRC_FIELD ((uint32_t)1U << 3)
 
-#define CFG0            0x002
-#define SMODE_FIELD     ((uint32_t)1U << 0)
-#define NSAMPLES_MASK   0x000e
-#define NSAMPLES_SH     0x1
+#define CFG0 0x002
+#define SMODE_FIELD ((uint32_t)1U << 0)
+#define NSAMPLES_MASK 0x000e
+#define NSAMPLES_SH 0x1
 
-#define DATAIN          0x003
-#define DATAIN_H_MASK   0xff00
-#define DATAIN_H_SH     0x8
-#define DATAIN_L_MASK   0x00ff
-#define DATAIN_L_SH     0x0
+#define DATAIN 0x003
+#define DATAIN_H_MASK 0xff00
+#define DATAIN_H_SH 0x8
+#define DATAIN_L_MASK 0x00ff
+#define DATAIN_L_SH 0x0
 
-#define DATAOUT         0x004
+#define DATAOUT 0x004
 
-#define STATUS          0x005
-#define READY_FIELD     ((uint32_t)1U << 0)
-#define SCPLT_FIELD     ((uint32_t)1U << 1)
-#define PCPLT_FIELD     ((uint32_t)1U << 2)
-#define FULL_FIELD      ((uint32_t)1U << 3)
-#define EMPTY_FIELD     ((uint32_t)1U << 4)
+#define STATUS 0x005
+#define READY_FIELD ((uint32_t)1U << 0)
+#define SCPLT_FIELD ((uint32_t)1U << 1)
+#define PCPLT_FIELD ((uint32_t)1U << 2)
+#define FULL_FIELD ((uint32_t)1U << 3)
+#define EMPTY_FIELD ((uint32_t)1U << 4)
 
 // Number of samples processed max (actual number set in NSAMPLES)
-#define SAMPLES_COUNT   2048
-
+#define SAMPLES_COUNT 2048
 
 // Struct representing device
-typedef struct {
+typedef struct
+{
     SysBusDevice parent_obj;
     MemoryRegion iomem;
     qemu_irq irq;
@@ -70,31 +69,34 @@ typedef struct {
     uint32_t dataout;
     uint32_t status;
 
-    // Sample/Download indices
-    uint16_t sampleIdx;
-    uint16_t resultIdx;
-
-    // Samples vectors
-    uint32_t samplesInOut[SAMPLES_COUNT];
-
-    // Number of samples selected
-    uint16_t nSamples;
 } VirtFftAccState;
 
+// Sample/Download indices
+uint16_t sampleIdx;
+uint16_t resultIdx;
+
+// Samples vectors
+uint32_t samplesInOut[SAMPLES_COUNT];
+
+// Number of samples selected
+uint16_t nSamples;
 
 // ------------------- FFT ALOGITHM START -------------------
 
 // Cooley-Tukey based fft (https://it.wikipedia.org/wiki/Trasformata_di_Fourier_veloce)
 // Function to reorder the complex array based on the reverse index
 // Only real part is reordered since imaginary is just zeros
-static void sort(int *f_real, int N) {
+static void sort(int *f_real, int N)
+{
     int f2_real[SAMPLES_COUNT_MAX];
 
-    for(int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++)
+    {
         // Calculate reverse index
         int j, rev = 0;
-        for(j = 1; j <= log2(N); j++) {
-            if(i & (1 << (int)(log2(N) - j)))
+        for (j = 1; j <= log2(N); j++)
+        {
+            if (i & (1 << (int)(log2(N) - j)))
                 rev |= 1 << (j - 1);
         }
 
@@ -102,13 +104,15 @@ static void sort(int *f_real, int N) {
     }
 
     // Copy ordered arrays
-    for(int j = 0; j < N; j++) {
+    for (int j = 0; j < N; j++)
+    {
         f_real[j] = f2_real[j];
     }
 }
 
 // Function to perform the Cooley-Tukey FFT
-static void FFT(int *f_real, int *f_imag, int N) {
+static void FFT(int *f_real, int *f_imag, int N)
+{
     // Create real and imaginary vectors
     double W_real[SAMPLES_COUNT_MAX / 2 * sizeof(double)];
     double W_imag[SAMPLES_COUNT_MAX / 2 * sizeof(double)];
@@ -122,16 +126,20 @@ static void FFT(int *f_real, int *f_imag, int N) {
     W_real[0] = 1.0;
     W_imag[0] = 0.0;
 
-    for(int i = 2; i < N / 2; i++) {
+    for (int i = 2; i < N / 2; i++)
+    {
         W_real[i] = W_real[1] * W_real[i - 1] - W_imag[1] * W_imag[i - 1];
         W_imag[i] = W_imag[1] * W_real[i - 1] + W_real[1] * W_imag[i - 1];
     }
 
     int n = 1;
     int a = N / 2;
-    for(int j = 0; j < log2(N); j++) {
-        for(int i = 0; i < N; i++) {
-            if(!(i & n)) {
+    for (int j = 0; j < log2(N); j++)
+    {
+        for (int i = 0; i < N; i++)
+        {
+            if (!(i & n))
+            {
                 int temp_real = f_real[i];
                 int temp_imag = f_imag[i];
                 int temp_real2 = f_real[i + n];
@@ -162,38 +170,42 @@ static void computeFFT(VirtFftAccState *s)
     int wave_samples_imag[SAMPLES_COUNT_MAX];
 
     // Copy the real values from the original sample
-    for (int i = 0; i < s->nSamples; i++) {
-        wave_samples_real[i] = s->samplesInOut[i];
-        wave_samples_imag[i] = 0;  // Imaginary part is 0 initially
+    for (int i = 0; i < nSamples; i++)
+    {
+        wave_samples_real[i] = samplesInOut[i];
+        wave_samples_imag[i] = 0; // Imaginary part is 0 initially
     }
 
     // Number of elements of vector is guaranteed to be power of two
-    FFT(wave_samples_real, wave_samples_imag, s->nSamples);
+    FFT(wave_samples_real, wave_samples_imag, nSamples);
 
     // Compute magnitudes
-    for (int i = 0; i < s->nSamples; i++)
-        s->samplesInOut[i] = sqrt(pow(wave_samples_real[i], 2) + pow(wave_samples_imag[i], 2));
+    for (int i = 0; i < nSamples; i++)
+        samplesInOut[i] = sqrt(pow(wave_samples_real[i], 2) + pow(wave_samples_imag[i], 2));
 
     // Find max and min
-    int min_val = s->samplesInOut[0];
+    int min_val = samplesInOut[0];
     int max_val = 0;
 
-    for (int i = 1; i < s->nSamples; i++) {
-        if (s->samplesInOut[i] < min_val) {
-            min_val = s->samplesInOut[i];
+    for (int i = 1; i < nSamples; i++)
+    {
+        if (samplesInOut[i] < min_val)
+        {
+            min_val = samplesInOut[i];
         }
-        if (s->samplesInOut[i] > max_val) {
-            max_val = s->samplesInOut[i];
+        if (samplesInOut[i] > max_val)
+        {
+            max_val = samplesInOut[i];
         }
     }
 
     // Scale all samples
-    for (int i = 0; i < s->nSamples; i++)
+    for (int i = 0; i < nSamples; i++)
     {
         if (max_val == min_val)
-            s->samplesInOut[i] = pow(2, (s->cfg & SMODE_FIELD)+4-1);
+            samplesInOut[i] = pow(2, (s->cfg & SMODE_FIELD) + 4 - 1);
         else
-            s->samplesInOut[i] = (float)(s->samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->cfg & SMODE_FIELD)+4);
+            samplesInOut[i] = (float)(samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->cfg & SMODE_FIELD) + 4);
     }
 
     return;
@@ -203,9 +215,9 @@ static void computeFFT(VirtFftAccState *s)
 static void virt_fft_acc_set_irq(VirtFftAccState *s, int irq)
 {
     // Set interrupt status
-    //s->status = (s->status & ~irq) | irq;
+    // s->status = (s->status & ~irq) | irq;
     s->status = s->status | irq;
-    
+
     // Trigger interrupt if enabled
     if (s->ctrl & IEN_FIELD)
     {
@@ -228,18 +240,18 @@ static void virt_fft_acc_sample_data(VirtFftAccState *s)
         // 16-bit samples
 
         // First sample in (DATAIN_LOW)
-        s->samplesInOut[s->sampleIdx] = s->datain & 0x00ff;
-        s->sampleIdx++;
+        samplesInOut[sampleIdx] = s->datain & 0x00ff;
+        sampleIdx++;
 
         // Second sample in (DATAIN_HIGH)
-        s->samplesInOut[s->sampleIdx] = s->datain & 0xff00;
-        s->sampleIdx++;
+        samplesInOut[sampleIdx] = s->datain & 0xff00;
+        sampleIdx++;
     }
     else
     {
         // 32-bit samples
-        s->samplesInOut[s->sampleIdx] = s->datain;
-        s->sampleIdx++;
+        samplesInOut[sampleIdx] = s->datain;
+        sampleIdx++;
     }
 }
 
@@ -250,7 +262,8 @@ static uint64_t virt_fft_acc_read(void *opaque, hwaddr offset, unsigned size)
     VirtFftAccState *s = (VirtFftAccState *)opaque;
 
     // Return registers content
-    switch (offset) {
+    switch (offset)
+    {
     case DEVID:
         return ID;
     case CTRL:
@@ -262,7 +275,7 @@ static uint64_t virt_fft_acc_read(void *opaque, hwaddr offset, unsigned size)
     case STATUS:
         // Deassert interrupt
         virt_fft_acc_clr_irq(s);
-        
+
         // Save return value
         uint64_t status = s->status;
 
@@ -280,12 +293,13 @@ static uint64_t virt_fft_acc_read(void *opaque, hwaddr offset, unsigned size)
 
 // Memory write implementation
 static void virt_fft_acc_write(void *opaque, hwaddr offset, uint64_t value,
-                          unsigned size)
+                               unsigned size)
 {
     // Cast to device struct
     VirtFftAccState *s = (VirtFftAccState *)opaque;
 
-    switch (offset) {
+    switch (offset)
+    {
     case CTRL:
         // Copy only EN fields
         s->ctrl = (int)value & (EN_FIELD | IEN_FIELD);
@@ -297,33 +311,33 @@ static void virt_fft_acc_write(void *opaque, hwaddr offset, uint64_t value,
             if (s->ctrl & EN_FIELD)
             {
                 // Sample datain
-                if (s->sampleIdx < s->nSamples)
+                if (sampleIdx < nSamples)
                 {
                     virt_fft_acc_sample_data(s);
                 }
 
                 // Interrupt when op complete and if full
-                virt_fft_acc_set_irq(s, SCPLT_FIELD | (s->sampleIdx == s->nSamples ? FULL_FIELD : 0));
-    
+                virt_fft_acc_set_irq(s, SCPLT_FIELD | (sampleIdx == nSamples ? FULL_FIELD : 0));
+
                 // Feedback
-                if (s->sampleIdx == s->nSamples)
-                    printf("All %0d samples loaded, full and ready to process", s->nSamples);
+                if (sampleIdx == nSamples)
+                    printf("All %0d samples loaded, full and ready to process", nSamples);
             }
             else
             {
                 // Download dataout
-                if (s->resultIdx < s->nSamples/2)
+                if (resultIdx < nSamples / 2)
                 {
-                    s->dataout = s->samplesInOut[s->resultIdx];
-                    s->resultIdx++;
+                    s->dataout = samplesInOut[resultIdx];
+                    resultIdx++;
                 }
 
                 // Interrupt when op complete
-                virt_fft_acc_set_irq(s, SCPLT_FIELD | (s->resultIdx == s->nSamples/2 ? EMPTY_FIELD : 0));
+                virt_fft_acc_set_irq(s, SCPLT_FIELD | (resultIdx == nSamples / 2 ? EMPTY_FIELD : 0));
 
                 // Feedback
-                if (s->resultIdx < s->nSamples/2)
-                    printf("All %0d samples downloaded, empty", s->nSamples/2);
+                if (resultIdx < nSamples / 2)
+                    printf("All %0d samples downloaded, empty", nSamples / 2);
             }
         }
         else if (value & PRC_FIELD)
@@ -336,13 +350,15 @@ static void virt_fft_acc_write(void *opaque, hwaddr offset, uint64_t value,
         }
 
         // Reset operations
-        if (s->ctrl & EN_FIELD){
+        if (s->ctrl & EN_FIELD)
+        {
             // Enabled, reset download counter
-            s->resultIdx = 0;
+            resultIdx = 0;
         }
-        else {
+        else
+        {
             // Reset upload counter
-            s->sampleIdx = 0;
+            sampleIdx = 0;
 
             // Set status register
             s->status = s->status | READY_FIELD;
@@ -354,7 +370,7 @@ static void virt_fft_acc_write(void *opaque, hwaddr offset, uint64_t value,
         s->cfg = (int)value;
 
         // Set samples count
-        s->nSamples = (uint16_t) pow(2, (double) (((s->cfg & NSAMPLES_MASK) >> NSAMPLES_SH)+4));
+        nSamples = (uint16_t)pow(2, (double)(((s->cfg & NSAMPLES_MASK) >> NSAMPLES_SH) + 4));
         break;
 
     case DATAIN:
@@ -383,7 +399,8 @@ static void virt_fft_acc_realize(DeviceState *d, Error **errp)
     sysbus_init_mmio(sbd, &s->iomem);
     sysbus_init_irq(sbd, &s->irq);
 
-    s->id = ID; 
+    s->id = ID;
+    s->ctrl = 0;
 }
 
 static void virt_fft_acc_class_init(ObjectClass *klass, void *data)
@@ -394,10 +411,10 @@ static void virt_fft_acc_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo virt_fft_acc_info = {
-    .name          = TYPE_VIRT_FFT_ACC,
-    .parent        = TYPE_SYS_BUS_DEVICE,
+    .name = TYPE_VIRT_FFT_ACC,
+    .parent = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(VirtFftAccState),
-    .class_init    = virt_fft_acc_class_init,
+    .class_init = virt_fft_acc_class_init,
 };
 
 static void virt_fft_acc_register_types(void)

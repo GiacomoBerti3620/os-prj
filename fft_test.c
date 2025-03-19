@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <math.h>
 
-#define DEVICE_FILE "/dev/fft_acc"
+#define DEVICE_FILE "/dev/virt-fft-acc"
 #define FFT_ACC_RESET     _IO('F', 0)
 #define FFT_ACC_START     _IO('F', 1)
 #define FFT_ACC_SET_CFG   _IOW('F', 2, uint32_t)
