@@ -79,7 +79,8 @@ struct virt_fft_acc
 
 // >> Read Id register
 
-static ssize_t vf_show_id(struct device *dev, char *buf)
+static ssize_t vf_show_id(struct device *dev,
+                          struct device_attribute *attr, char *buf)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     u32 val = readl_relaxed(vf->base + DEVID);
@@ -87,18 +88,11 @@ static ssize_t vf_show_id(struct device *dev, char *buf)
     return scnprintf(buf, PAGE_SIZE, "Chip ID: 0x%.x\\n", val);
 }
 
-// >> Read Status register
-
-static u32 vf_show_status(struct device *dev)
-{
-    struct virt_fft_acc *vf = dev_get_drvdata(dev);
-    u32 val = readl_relaxed(vf->base + STATUS);
-
-    return val;
-}
 // >> Write on Control register
 
-static int vf_store_ctrl_en(struct device *dev, const char *buf)
+static ssize_t vf_store_ctrl_en(struct device *dev,
+                                struct device_attribute *attr,
+                                const char *buf, size_t len)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val;
@@ -110,143 +104,166 @@ static int vf_store_ctrl_en(struct device *dev, const char *buf)
     val = (prevval & ~EN_FIELD) | (val * EN_FIELD);
     writel_relaxed(val, vf->base + CTRL);
 
-    return 0;
+    return len;
 }
 
-static int vf_store_ctrl_ien(struct device *dev, const char *buf)
+static ssize_t vf_store_ctrl_ien(struct device *dev,
+                                 struct device_attribute *attr,
+                                 const char *buf, size_t len)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val;
     u32 prevval = readl_relaxed(vf->base + CTRL);
 
     if (kstrtoul(buf, 0, &val))
-        return -1;
+        return -EINVAL;
 
     val = (prevval & ~IEN_FIELD) | (val * IEN_FIELD);
     writel_relaxed(val, vf->base + CTRL);
 
-    return 0;
+    return len;
 }
 
-static int vf_store_ctrl_sam(struct device *dev, const char *buf)
+static ssize_t vf_store_ctrl_sam(struct device *dev,
+                                 struct device_attribute *attr,
+                                 const char *buf, size_t len)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val;
     u32 prevval = readl_relaxed(vf->base + CTRL);
 
     if (kstrtoul(buf, 0, &val))
-        return -1;
+        return -EINVAL;
 
     val = (prevval & ~SAM_FIELD) | (val * SAM_FIELD);
     writel_relaxed(val, vf->base + CTRL);
 
-    return 0;
+    return len;
 }
 
-static int vf_store_ctrl_prc(struct device *dev, const char *buf)
+static ssize_t vf_store_ctrl_prc(struct device *dev,
+                                 struct device_attribute *attr,
+                                 const char *buf, size_t len)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val;
     u32 prevval = readl_relaxed(vf->base + CTRL);
 
     if (kstrtoul(buf, 0, &val))
-        return -1;
+        return -EINVAL;
 
     val = (prevval & ~PRC_FIELD) | (val * PRC_FIELD);
     writel_relaxed(val, vf->base + CTRL);
 
-    return 0;
+    return len;
 }
 
 // >> Store control wrapper
-static int vf_store_ctrl(struct device *dev, const char *buf,
-                         e_controlField ctrl_field)
+static ssize_t vf_store_ctrl(struct device *dev,
+                             struct device_attribute *attr,
+                             const char *buf, size_t len,
+                             e_controlField ctrl_field)
 {
     switch (ctrl_field)
     {
     case CTRL_EN:
-        len = vf_store_ctrl_en(dev, buf);
+        len = vf_store_ctrl_en(dev, attr, buf, len);
         break;
     case CTRL_I_EN:
-        len = vf_store_ctrl_ien(dev, buf);
+        len = vf_store_ctrl_ien(dev, attr, buf, len);
         break;
     case CTRL_SAM:
-        len = vf_store_ctrl_sam(dev, buf);
+        len = vf_store_ctrl_sam(dev, attr, buf, len);
         break;
     case CTRL_PRC:
-        len = vf_store_ctrl_prc(dev, buf);
+        len = vf_store_ctrl_prc(dev, attr, buf, len);
         break;
     default:
-        return -1
+        len = -1;
+        break;
     }
 
-    return 0;
+    return len;
 }
 
 // >> Write on Configuration register
 
-static int vf_store_cfg_smode(struct device *dev, const char *buf)
+static ssize_t vf_store_cfg_smode(struct device *dev,
+                                  struct device_attribute *attr,
+                                  const char *buf, size_t len)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val;
     u32 prevval = readl_relaxed(vf->base + CFG0);
 
     if (kstrtoul(buf, 0, &val))
-        return -1;
+        return -EINVAL;
 
     val = (prevval & ~SMODE_FIELD) | (val * SMODE_FIELD);
     writel_relaxed(val, vf->base + CFG0);
 
-    return 0;
+    return len;
 }
 
-static int vf_store_cfg_nsamples(struct device *dev, const char *buf)
+static ssize_t vf_store_cfg_nsamples(struct device *dev,
+                                     struct device_attribute *attr,
+                                     const char *buf, size_t len)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val;
     u32 prevval = readl_relaxed(vf->base + CFG0);
 
     if (kstrtoul(buf, 0, &val))
-        return -1;
+        return -EINVAL;
 
     val = (prevval & ~NSAMPLES_MASK) | (val * NSAMPLES_SH);
     writel_relaxed(val, vf->base + CFG0);
 
-    return 0;
+    return len;
 }
 
 // >> Store config wrapper
-static int vf_store_cfg(struct device *dev,
-                        const char *buf, e_configField store_field)
+static ssize_t vf_store_cfg(struct device *dev,
+                            struct device_attribute *attr,
+                            const char *buf, size_t len,
+                            e_configField store_field)
 {
     switch (store_field)
     {
     case CFG_SMODE:
-        return vf_store_cfg_smode(dev, attr, buf, len);
+        len = vf_store_cfg_smode(dev, attr, buf, len);
+        break;
     case CFG_NSAMPLES:
-        return vf_store_cfg_nsamples(dev, attr, buf, len);
+        len = vf_store_cfg_nsamples(dev, attr, buf, len);
+        break;
     default:
-        return -1;
+        len = -1;
+        break;
     }
+
+    return len;
 }
 
 // >> Write DATAIN register
 
-static int vf_write_32data(struct device *dev, const char *buf)
+static ssize_t vf_write_32data(struct device *dev,
+                               struct device_attribute *attr,
+                               const char *buf, size_t len)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val;
 
     if (kstrtoul(buf, 0, &val))
-        return -1;
+        return -EINVAL;
 
     writel_relaxed(val, vf->base + DATAIN);
 
-    return 0;
+    return len;
 }
 
-static int vf_write_2_16data(struct device *dev,
-                             char *buf0, char *buf1)
+static ssize_t vf_write_2_16data(struct device *dev,
+                                 struct device_attribute *attr,
+                                 char *buf0, char *buf1, size_t len)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val, val0, val1;
@@ -254,34 +271,40 @@ static int vf_write_2_16data(struct device *dev,
     if (kstrtoul(buf0, 0, &val0))
         return -EINVAL;
     if (kstrtoul(buf1, 0, &val1))
-        return -1;
+        return -EINVAL;
     val = val0 | (val1 << DATAIN_H_SH);
 
     writel_relaxed(val, vf->base + DATAIN);
 
-    return 0;
+    return len;
 }
 
 // >> Write datain wrapper
-static int vf_write_data(struct device *dev, const char *buf0,
-                         const char *buf1, e_datainField data_field)
+static ssize_t vf_write_data(struct device *dev,
+                             struct device_attribute *attr,
+                             const char *buf0, const char *buf1,
+                             size_t len, e_datainField data_field)
 {
     switch (data_field)
     {
     case DATAIN_DATAIN_LOW:
-        return vf_write_32data(dev, attr, buf0);
+        len = vf_write_32data(dev, attr, buf0, len);
+        break;
     case DATAIN_DATAIN_HIGH:
-        return vf_write_2_16data(dev, attr, buf0, buf1);
+        len = vf_write_2_16data(dev, attr, buf0, buf1, len);
+        break;
     default:
-        return -1;
+        len = -1;
+        break;
     }
 
-    return 0;
+    return len;
 }
 
 // >> Read DATAOUT register
 
-static u32 vf_read_dataout(struct device *dev)
+static u32 vf_read_dataout(struct device *dev,
+                           struct device_attribute *attr, char *buf)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     u32 val = readl_relaxed(vf->base + DATAOUT);
@@ -294,7 +317,6 @@ static DEVICE_ATTR(ctrl, S_IRUGO | S_IWUSR, NULL, vf_store_ctrl);
 static DEVICE_ATTR(cfg, S_IRUGO | S_IWUSR, NULL, vf_store_cfg);
 static DEVICE_ATTR(datain, S_IWUSR, NULL, vf_write_data);
 static DEVICE_ATTR(dataout, S_IRUGO, vf_read_dataout, NULL);
-static DEVICE_ATTR(status, S_IRUGO, vf_show_status, NULL);
 
 static struct attribute *vf_attributes[] = {
     &dev_attr_id.attr,
@@ -302,7 +324,6 @@ static struct attribute *vf_attributes[] = {
     &dev_attr_cfg.attr,
     &dev_attr_datain.attr,
     &dev_attr_dataout.attr,
-    &dev_attr_status.attr,
     NULL,
 };
 
@@ -324,12 +345,9 @@ void fft_operation(int n_samples, int s_mode,
 {
     int fd, i;
     char n_samples_char, s_mode_char;
-    char buf0[];
-    char buf1[];
 
     fd = open("/dev/virt_fft_acc", O_RDWR);
-
-    vf_store_ctrl(fd, "0", CTRL_EN);
+    vf_init(fd);
 
     switch (n_samples)
     {
@@ -373,35 +391,15 @@ void fft_operation(int n_samples, int s_mode,
         break;
     }
 
-    vf_store_cfg(fd, n_samples_char, CFG_NSAMPLES);
-    vf_store_cfg(fd, s_mode_char, CFG_SMODE);
-    vf_store_ctrl(fd, "1", CTRL_EN);
+    vf_store_cfg(fd, cfg, n_samples_char, 0, CFG_NSAMPLES);
+    vf_store_cfg(fd, cfg, s_mode_char, 0, CFG_SMODE);
+    vf_store_ctrl(fd, ctrl, (char) 1, 0, CTRL_EN);
 
     i = 0;
-    while (i < n_samples)
+    while(i < n_samples)
     {
-        if (s_mode_char == "0")
-            vf_write_data(fd, datain, (char *)data_in[i], (char *)data_in[i],  DATAIN_DATAIN_LOW);
-            i++;
-
-        if (s_mode_char == "1")
-            vf_write_data(fd, datain, (char *)(data_in[i] & DATAIN_L_MASK), (char *)((data_in[i+1] | DATAIN_H_MASK) >> DATAIN_H_SH),  DATAIN_DATAIN_HIGH);
-            i = i +2;
-    
-        vf_store_ctrl(fd, "1", CTRL_SAM);
-        while ( vf_show_status(fd) & SCPLT_FIELD == 0 );
+        vf_write_data(fd, datain, )
     }
-
-    vf_store_ctrl(fd, "1", CTRL_PRC);
-    vf_store_ctrl(fd, "0", CTRL_EN);
-    i = 0;
-    while (vf_show_status(fd) & EMPTY_FIELD == 0)
-    {
-        vf_store_ctrl(fd, "1", CTRL_SAM);
-        while ( vf_show_status(fd) & PCPLT_FIELD == 0 );
-        data_out[i] = vf_read_dataout(fd);
-    }
-    vf_store_ctrl(fd, "1", CTRL_PRC);
 
 }
 

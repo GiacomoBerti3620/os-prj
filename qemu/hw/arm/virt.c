@@ -185,7 +185,7 @@ static const MemMapEntry base_memmap[] = {
     [VIRT_SECURE_GPIO] = {0x090b0000, 0x00001000},
     [VIRT_MMIO] = {0x0a000000, 0x00000200},
     /* ...repeating for a total of NUM_VIRTIO_TRANSPORTS, each of that size */
-    [VIRT_FFT_ACC] = { 0x0b000000, 0x00000100 },    // Custom memory mapping for FFT Cusotm Accelerator Device
+    [VIRT_FFT_ACC] = { 0x0b000000, 0x00000200 },    // Custom memory mapping for FFT Cusotm Accelerator Device
     [VIRT_PLATFORM_BUS] = {0x0c000000, 0x02000000},
     [VIRT_SECURE_MEM] = {0x0e000000, 0x01000000},
     [VIRT_PCIE_MMIO] = {0x10000000, 0x2eff0000},

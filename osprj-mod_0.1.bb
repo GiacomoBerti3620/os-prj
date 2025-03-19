@@ -5,8 +5,7 @@ LICENSE = "CLOSED"
 inherit module
 
 SRC_URI = "file://Makefile \
-           file://echodev-drv.c \
-           file://echodev-cmd.h \
+           file://virt_fft_acc_drv.c \
           "
 
 S = "${WORKDIR}/sources"
