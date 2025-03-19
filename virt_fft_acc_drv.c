@@ -311,7 +311,7 @@ static void vf_init(struct virt_fft_acc *vf)
     writel_relaxed(ctrl_reg_nen, vf->base + CTRL);
 }
 
-void fft_operation(int n_samples, int s_mode,
+void fft_operation(int dev, int n_samples, int s_mode,
                    unsigned long *data_in, unsigned long *data_out)
 {
     int fd, i;
@@ -322,9 +322,7 @@ void fft_operation(int n_samples, int s_mode,
     e_controlField my_controlField;
     e_datainField my_datainField;
 
-    dev = open("/dev/virt_fft_acc", O_RDWR);
-
-    struct device fd = &dev;
+    struct device *fd = &dev;
 
     vf_store_ctrl(&fd, "0", CTRL_EN);
 
@@ -409,8 +407,6 @@ void fft_operation(int n_samples, int s_mode,
 
     my_controlField = CTRL_EN;
     vf_store_ctrl(&fd, "1", my_controlField);
-    close(fd);
-
 }
 
 static irqreturn_t vf_irq_handler(int irq, void *data)

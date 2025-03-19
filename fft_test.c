@@ -30,6 +30,7 @@ int main(void )
 		-269, -268, -267, -266, -265, -264, -263, -262, -261, 
 		-260, -259, -258, -257, -256, -255, -254, -253, -252, -251, -250];
 
+	fd = open("/dev/virt-fft-acc", O_RDWR);
 	fft_operation(256, 0, data_in, data_out);
 
 	return 0;
