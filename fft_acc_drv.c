@@ -6,7 +6,7 @@
 #include <linux/cdev.h>
 #include <linux/device.h>
 
-#define DEVICE_NAME "fft_acc"
+#define DEVICE_NAME "virt-fft-acc"
 #define FFT_ACC_BASE_ADDR 0x0b000000
 #define FFT_ACC_REG_SIZE  0x200
 
