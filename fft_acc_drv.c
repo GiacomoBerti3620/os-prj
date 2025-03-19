@@ -7,7 +7,7 @@
 #include <linux/device.h>
 
 #define DEVICE_NAME "fft_acc"
-#define FFT_ACC_BASE_ADDR 0x40000000
+#define FFT_ACC_BASE_ADDR 0x0b000000
 #define FFT_ACC_REG_SIZE  0x100
 
 // Register offsets

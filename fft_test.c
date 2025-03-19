@@ -30,7 +30,7 @@ void generate_sine_wave(uint32_t *buffer, int bit_mode) {
 			double sine_value0 = sin(angle0);
 			double sine_value1 = sin(angle1);
             uint16_t high = (uint16_t)((int)((sine_value0 + 1.0) * 0x7FFF) & 0xFFFF);
-			uint16_t low = (uint16_t)((int)((sin_value1 + 1.0) * 0x7FFF) & 0xFFFF);
+			uint16_t low = (uint16_t)((int)((sine_value1 + 1.0) * 0x7FFF) & 0xFFFF);
             buffer[i] = (high << 16) | low;
 		}
     }
