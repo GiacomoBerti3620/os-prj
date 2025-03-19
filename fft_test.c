@@ -17,16 +17,22 @@
 #define PI 3.14
 
 void generate_sine_wave(uint32_t *buffer, int bit_mode) {
-    for (int i = 0; i < NUM_SAMPLES; i++) {
-        double angle = 2.0 * PI * i / NUM_SAMPLES;
-        double sine_value = sin(angle);
-        if (bit_mode == 32) {
-            buffer[i] = (uint32_t)((sine_value + 1.0) * (0x7FFFFFFF)); // Scale to 32-bit unsigned
-        } else {
-            uint16_t high = (uint16_t)(((sine_value + 1.0) * 0x7FFF) & 0xFFFF);
-            uint16_t low = (uint16_t)(((sine_value + 1.0) * 0x7FFF) & 0xFFFF);
+    if (bit_mode == 32) {
+		for (int i = 0; i < NUM_SAMPLES; i++) {
+			double angle = 2.0 * PI * i / NUM_SAMPLES;
+			double sine_value = sin(angle);
+			buffer[i] = (uint32_t)((sine_value + 1.0) * (0x7FFFFFFF)); // Scale to 32-bit unsigned
+		}
+    } else {
+		for (int i = 0; i < NUM_SAMPLES; i = i+2) {
+			double angle0 = 2.0 * PI * i / NUM_SAMPLES;
+			double angle1 = 2.0 * PI * i+1 / NUM_SAMPLES;
+			double sine_value0 = sin(angle0);
+			double sine_value1 = sin(angle1);
+            uint16_t high = (uint16_t)((int)((sine_value0 + 1.0) * 0x7FFF) & 0xFFFF);
+			uint16_t low = (uint16_t)((int)((sin_value1 + 1.0) * 0x7FFF) & 0xFFFF);
             buffer[i] = (high << 16) | low;
-        }
+		}
     }
 }
 
