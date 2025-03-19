@@ -1,4 +1,4 @@
-obj-m := virt_fft_acc_drv.o
+obj-m := fft_acc_drv.o
 
 SRC := $(shell pwd)
 

@@ -1,37 +1,82 @@
 #include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
+#include <stdint.h>
+#include <math.h>
 
-int main(void )
-{
-	unsigned long data_out[256];
-	unsigned long data_in[] = [0, 12, 24, 35, 46, 57, 67, 77, 87, 97, 106, 115, 
-		124, 132, 141, 149, 157, 165, 173, 181, 188, 196, 
-		203, 210, 217, 223, 229, 235, 240, 245, 250, 254, 
-		258, 262, 266, 269, 272, 275, 277, 279, 281, 283, 
-		285, 286, 287, 288, 289, 289, 289, 289, 288, 288, 
-		287, 286, 285, 284, 282, 281, 279, 277, 275, 273, 
-		270, 268, 265, 262, 259, 256, 252, 249, 245, 241, 
-		237, 233, 229, 224, 220, 215, 210, 205, 200, 195, 
-		189, 184, 178, 172, 166, 160, 154, 148, 142, 135, 
-		129, 122, 116, 109, 103, 96, 90, 83, 76, 69, 62, 
-		55, 48, 41, 34, 27, 20, 13, 6, -1, -8, -15, -22, 
-		-28, -35, -41, -47, -53, -59, -65, -71, -77, -83, 
-		-89, -95, -101, -106, -112, -117, -123, -128, -133, 
-		-138, -143, -148, -153, -158, -163, -168, -172, -177,
-		-181, -185, -190, -194, -198, -202, -206, -210, -213, 
-		-217, -220, -224, -227, -230, -233, -236, -239, -242, 
-		-245, -247, -250, -252, -254, -257, -259, -261, -263, 
-		-265, -267, -268, -270, -271, -272, -273, -274, -275, 
-		-275, -276, -276, -276, -276, -276, -276, -276, -276, 
-		-275, -275, -274, -274, -273, -272, -272, -271, -270, 
-		-269, -268, -267, -266, -265, -264, -263, -262, -261, 
-		-260, -259, -258, -257, -256, -255, -254, -253, -252, -251, -250];
+#define DEVICE_FILE "/dev/fft_acc"
+#define FFT_ACC_RESET     _IO('F', 0)
+#define FFT_ACC_START     _IO('F', 1)
+#define FFT_ACC_SET_CFG   _IOW('F', 2, uint32_t)
+#define FFT_ACC_LOAD_DATA _IOW('F', 3, uint32_t)
+#define FFT_ACC_GET_RESULT _IOR('F', 4, uint32_t)
 
-	fd = open("/dev/virt-fft-acc", O_RDWR);
-	fft_operation(256, 0, data_in, data_out);
+#define NUM_SAMPLES 2048
+#define PI 3.14
 
-	return 0;
+void generate_sine_wave(uint32_t *buffer, int bit_mode) {
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+        double angle = 2.0 * PI * i / NUM_SAMPLES;
+        double sine_value = sin(angle);
+        if (bit_mode == 32) {
+            buffer[i] = (uint32_t)((sine_value + 1.0) * (0x7FFFFFFF)); // Scale to 32-bit unsigned
+        } else {
+            uint16_t high = (uint16_t)(((sine_value + 1.0) * 0x7FFF) & 0xFFFF);
+            uint16_t low = (uint16_t)(((sine_value + 1.0) * 0x7FFF) & 0xFFFF);
+            buffer[i] = (high << 16) | low;
+        }
+    }
+}
+
+void load_samples(int fd, uint32_t *sine_wave, int bit_mode) {
+    ioctl(fd, FFT_ACC_RESET);
+    uint32_t cfg = (bit_mode == 32) ? 0x6 : 0x7; // NSAM_2048, SMODE
+    ioctl(fd, FFT_ACC_SET_CFG, &cfg);
+    
+    for (uint32_t i = 0; i < NUM_SAMPLES; i++) {
+        ioctl(fd, FFT_ACC_LOAD_DATA, &sine_wave[i]);
+    }
+    
+}
+
+void read_results(int fd, uint32_t *results) {
+    
+    ioctl(fd, FFT_ACC_GET_RESULT, &results);
+
+}
+
+int main() {
+    int fd = open(DEVICE_FILE, O_RDWR);
+    if (fd < 0) {
+        perror("Failed to open FFT accelerator device");
+        return EXIT_FAILURE;
+    }
+
+    uint32_t sine_wave[NUM_SAMPLES];
+    uint32_t results[NUM_SAMPLES / 2];
+
+    // Test for 32-bit samples
+    printf("Testing FFT Accelerator with 32-bit sine wave samples\n");
+    generate_sine_wave(sine_wave, 32);
+    load_samples(fd, sine_wave, 32);
+    read_results(fd, results);
+    
+    for (uint32_t i = 0; i < NUM_SAMPLES / 2; i++) {
+        printf("FFT Result[%u]: %u\n", i, results[i]);
+    }
+
+    // Test for 16-bit samples
+    printf("Testing FFT Accelerator with 16-bit sine wave samples\n");
+    generate_sine_wave(sine_wave, 16);
+    load_samples(fd, sine_wave, 16);
+    read_results(fd, results);
+    
+    for (uint32_t i = 0; i < NUM_SAMPLES / 2; i++) {
+        printf("FFT Result[%u]: %u\n", i, results[i]);
+    }
+
+    close(fd);
+    return EXIT_SUCCESS;
 }

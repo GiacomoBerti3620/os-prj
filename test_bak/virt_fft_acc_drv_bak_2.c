@@ -314,7 +314,7 @@ static void vf_init(struct virt_fft_acc *vf)
 void fft_operation(int dev, int n_samples, int s_mode,
                    unsigned long *data_in, unsigned long *data_out)
 {
-    int fd, i;
+    int i;
     const char* n_samples_char, s_mode_char;
     char buf0[10];
     char buf1[10];

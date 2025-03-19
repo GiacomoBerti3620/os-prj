@@ -5,7 +5,7 @@ LICENSE = "CLOSED"
 inherit module
 
 SRC_URI = "file://Makefile \
-           file://virt_fft_acc_drv.c \
+           file://fft_acc_drv.c \
           "
 
 S = "${WORKDIR}/sources"
