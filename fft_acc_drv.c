@@ -67,7 +67,7 @@ static ssize_t vfft_show_id(struct device *dev,
 //     return len;
 // }
 
-static DEVICE_ATTR(id, S_IRUGO, vf_show_id, NULL);
+static DEVICE_ATTR(id, S_IRUGO, vfft_show_id, NULL);
 // static DEVICE_ATTR(cmd, S_IRUGO | S_IWUSR, vfft_show_cmd, vfft_store_cmd);
 
 static struct attribute *vfft_attributes[] = {
