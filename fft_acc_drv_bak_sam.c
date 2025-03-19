@@ -17,9 +17,6 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/sysfs.h>
-#include <linux/device.h>
-
-#define DEVICE_NAME "virt-fft-acc"
 
 #define REG_ID            0x0
 
@@ -85,9 +82,7 @@ static const struct attribute_group vfft_attr_group = {
 
 static void vfft_init(struct virt_fft_acc *vf)
 {
-    fft_class = class_create(DEVICE_NAME);
-    device_create(fft_class, NULL, vf->dev, NULL, DEVICE_NAME);
-    pr_info("FFT Accelerator driver initialized\n");
+    // writel_relaxed(HW_ENABLE, vf->base + REG_INIT);
 }
 
 static irqreturn_t vfft_irq_handler(int irq, void *data)
