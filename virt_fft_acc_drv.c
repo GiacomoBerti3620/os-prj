@@ -162,21 +162,16 @@ static int vf_store_ctrl(struct device *dev, const char *buf,
     switch (ctrl_field)
     {
     case CTRL_EN:
-        len = vf_store_ctrl_en(dev, buf);
-        break;
+        return vf_store_ctrl_en(dev, buf);
     case CTRL_I_EN:
-        len = vf_store_ctrl_ien(dev, buf);
-        break;
+        return vf_store_ctrl_ien(dev, buf);
     case CTRL_SAM:
-        len = vf_store_ctrl_sam(dev, buf);
-        break;
+        return vf_store_ctrl_sam(dev, buf);
     case CTRL_PRC:
-        len = vf_store_ctrl_prc(dev, buf);
-        break;
+        return vf_store_ctrl_prc(dev, buf);
     default:
-        return -1
+        return -1;
     }
-
     return 0;
 }
 
@@ -219,9 +214,9 @@ static int vf_store_cfg(struct device *dev,
     switch (store_field)
     {
     case CFG_SMODE:
-        return vf_store_cfg_smode(dev, attr, buf, len);
+        return vf_store_cfg_smode(dev, attr, buf);
     case CFG_NSAMPLES:
-        return vf_store_cfg_nsamples(dev, attr, buf, len);
+        return vf_store_cfg_nsamples(dev, attr, buf);
     default:
         return -1;
     }
@@ -266,9 +261,9 @@ static int vf_write_data(struct device *dev, const char *buf0,
     switch (data_field)
     {
     case DATAIN_DATAIN_LOW:
-        return vf_write_32data(dev, attr, buf0);
+        return vf_write_32data(dev, buf0);
     case DATAIN_DATAIN_HIGH:
-        return vf_write_2_16data(dev, attr, buf0, buf1);
+        return vf_write_2_16data(dev, buf0, buf1);
     default:
         return -1;
     }
