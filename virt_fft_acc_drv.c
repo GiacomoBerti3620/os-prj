@@ -324,7 +324,7 @@ void fft_operation(int n_samples, int s_mode,
 
     fd = open("/dev/virt_fft_acc", O_RDWR);
 
-    vf_store_ctrl(fd, "0", CTRL_EN);
+    vf_store_ctrl(&fd, "0", CTRL_EN);
 
     switch (n_samples)
     {
@@ -369,44 +369,45 @@ void fft_operation(int n_samples, int s_mode,
     }
 
     my_configField = CFG_NSAMPLES;
-    vf_store_cfg(fd, n_samples_char, my_configField);
+    vf_store_cfg(&fd, n_samples_char, my_configField);
     my_configField = CFG_SMODE;
-    vf_store_cfg(fd, s_mode_char, my_configField);
+    vf_store_cfg(&fd, s_mode_char, my_configField);
     my_controlField = CTRL_EN;
-    vf_store_ctrl(fd, "1", my_configField);
+    vf_store_ctrl(&fd, "1", my_configField);
 
     i = 0;
     while (i < n_samples)
     {
         if (s_mode_char == "0")
             my_datainField = DATAIN_DATAIN_LOW;
-            vf_write_data(fd, datain, (char *)data_in[i], (char *)data_in[i],  my_datainField);
+            vf_write_data(&fd, datain, (char *)data_in[i], (char *)data_in[i],  my_datainField);
             i++;
 
         if (s_mode_char == "1")
             my_datainField = DATAIN_DATAIN_HIGH;
-            vf_write_data(fd, datain, (char *)(data_in[i] & DATAIN_L_MASK), (char *)((data_in[i+1] | DATAIN_H_MASK) >> DATAIN_H_SH),  my_datainField);
+            vf_write_data(&fd, datain, (char *)(data_in[i] & DATAIN_L_MASK), (char *)((data_in[i+1] | DATAIN_H_MASK) >> DATAIN_H_SH),  my_datainField);
             i = i +2;
     
-        vf_store_ctrl(fd, "1", CTRL_SAM);
-        while ( vf_show_status(fd) & SCPLT_FIELD == 0 );
+        vf_store_ctrl(&fd, "1", CTRL_SAM);
+        while ( vf_show_status(&fd) & SCPLT_FIELD == 0 );
     }
 
     my_controlField = CTRL_PRC;
-    vf_store_ctrl(fd, "1", my_controlField);
+    vf_store_ctrl(&fd, "1", my_controlField);
     my_controlField = CTRL_EN;
-    vf_store_ctrl(fd, "0", my_controlField);
+    vf_store_ctrl(&fd, "0", my_controlField);
 
     i = 0;
-    while (vf_show_status(fd) & EMPTY_FIELD == 0)
+    while (vf_show_status(&fd) & EMPTY_FIELD == 0)
     {
-        vf_store_ctrl(fd, "1", CTRL_SAM);
-        while ( vf_show_status(fd) & PCPLT_FIELD == 0 );
-        data_out[i] = vf_read_dataout(fd);
+        vf_store_ctrl(&fd, "1", CTRL_SAM);
+        while ( vf_show_status(&fd) & PCPLT_FIELD == 0 );
+        data_out[i] = vf_read_dataout(&fd);
     }
 
     my_controlField = CTRL_EN;
-    vf_store_ctrl(fd, "1", my_controlField);
+    vf_store_ctrl(&fd, "1", my_controlField);
+    close(fd);
 
 }
 
