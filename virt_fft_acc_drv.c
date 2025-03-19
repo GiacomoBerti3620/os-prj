@@ -238,7 +238,7 @@ static int vf_write_32data(struct device *dev, const char *buf)
 }
 
 static int vf_write_2_16data(struct device *dev,
-                             char *buf0, char *buf1)
+                             const char *buf0, const char *buf1)
 {
     struct virt_fft_acc *vf = dev_get_drvdata(dev);
     unsigned long val, val0, val1;
@@ -316,8 +316,8 @@ void fft_operation(int n_samples, int s_mode,
 {
     int fd, i;
     const char* n_samples_char, s_mode_char;
-    char buf0[];
-    char buf1[];
+    char buf0[10];
+    char buf1[10];
     e_configField my_configField;
     e_controlField my_controlField;
     e_datainField my_datainField;
