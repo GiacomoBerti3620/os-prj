@@ -142,7 +142,7 @@ static int __init fft_acc_init(void) {
         return ret;
     cdev_init(&fft_cdev, &fft_fops);
     cdev_add(&fft_cdev, fft_dev, 1);
-    fft_class = class_create(THIS_MODULE, DEVICE_NAME);
+    fft_class = class_create(DEVICE_NAME);
     device_create(fft_class, NULL, fft_dev, NULL, DEVICE_NAME);
     pr_info("FFT Accelerator driver initialized\n");
     return 0;
