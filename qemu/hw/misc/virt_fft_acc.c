@@ -1,425 +1,260 @@
-/**
- * VIRTUAL FFT Accelerator Device
- */
+#include <linux/module.h>
+#include <linux/fs.h>
+#include <linux/uaccess.h>
+#include <linux/io.h>
+#include <linux/cdev.h>
+#include <linux/device.h>
+#include <linux/slab.h>
 
-// Cooley-Tukey FFT
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <complex.h>
+#define DEVICE_NAME "virt_fft_acc"
+#define CLASS_NAME "virt_fft"
 
-#define SAMPLES_COUNT_MAX 2048
+static int majorNumber;
+static struct class* virt_fft_class = NULL;
+static struct device* virt_fft_device = NULL;
+static struct cdev virt_fft_cdev;
 
-// QEMU Device implementation
-#include "qemu/osdep.h"
-#include "hw/hw.h"
-#include "hw/sysbus.h"
-#include "qemu/bitops.h"
-#include "qemu/log.h"
-#include "hw/irq.h" // For qemu_set_irq
+// Define the base address of the device
+#define VIRT_FFT_BASE_ADDR 0x10000000
 
-#define TYPE_VIRT_FFT_ACC "virt-fft-acc"
-#define VIRT_FFT_ACC(obj) OBJECT_CHECK(VirtFftAccState, (obj), TYPE_VIRT_FFT_ACC)
-
-/* Register map */
+// Define the register offsets
 #define DEVID 0x000
-#define ID 0xfacecafe
-
 #define CTRL 0x001
-#define EN_FIELD ((uint32_t)1U << 0)
-#define IEN_FIELD ((uint32_t)1U << 1)
-#define SAM_FIELD ((uint32_t)1U << 2)
-#define PRC_FIELD ((uint32_t)1U << 3)
-
 #define CFG0 0x002
-#define SMODE_FIELD ((uint32_t)1U << 0)
-#define NSAMPLES_MASK 0x000e
-#define NSAMPLES_SH 0x1
-
 #define DATAIN 0x003
-#define DATAIN_H_MASK 0xff00
-#define DATAIN_H_SH 0x8
-#define DATAIN_L_MASK 0x00ff
-#define DATAIN_L_SH 0x0
-
 #define DATAOUT 0x004
-
 #define STATUS 0x005
-#define READY_FIELD ((uint32_t)1U << 0)
-#define SCPLT_FIELD ((uint32_t)1U << 1)
-#define PCPLT_FIELD ((uint32_t)1U << 2)
-#define FULL_FIELD ((uint32_t)1U << 3)
-#define EMPTY_FIELD ((uint32_t)1U << 4)
 
-// Number of samples processed max (actual number set in NSAMPLES)
-#define SAMPLES_COUNT 2048
+// Function prototypes
+static int virt_fft_open(struct inode *, struct file *);
+static int virt_fft_release(struct inode *, struct file *);
+static ssize_t virt_fft_read(struct file *, char __user *, size_t, loff_t *);
+static ssize_t virt_fft_write(struct file *, const char __user *, size_t, loff_t *);
+static long virt_fft_ioctl(struct file *, unsigned int, unsigned long);
 
-// Struct representing device
-typedef struct
-{
-    SysBusDevice parent_obj;
-    MemoryRegion iomem;
-    qemu_irq irq;
+// File operations structure
+static struct file_operations fops = {
+    .open = virt_fft_open,
+    .release = virt_fft_release,
+    .read = virt_fft_read,
+    .write = virt_fft_write,
+    .unlocked_ioctl = virt_fft_ioctl,
+};
 
-    // Registers
-    uint32_t id;
-    uint32_t ctrl;
-    uint32_t cfg;
-    uint32_t datain;
-    uint32_t dataout;
-    uint32_t status;
+static int virt_fft_open(struct inode *inodep, struct file *filep) {
+    printk(KERN_INFO "virt_fft: Device opened\n");
+    return 0;
+}
 
-} VirtFftAccState;
+static int virt_fft_release(struct inode *inodep, struct file *filep) {
+    printk(KERN_INFO "virt_fft: Device closed\n");
+    return 0;
+}
 
-// Sample/Download indices
-uint16_t sampleIdx;
-uint16_t resultIdx;
-
-// Samples vectors
-uint32_t samplesInOut[SAMPLES_COUNT];
-
-// Number of samples selected
-uint16_t nSamples;
-
-// ------------------- FFT ALOGITHM START -------------------
-
-// Cooley-Tukey based fft (https://it.wikipedia.org/wiki/Trasformata_di_Fourier_veloce)
-// Function to reorder the complex array based on the reverse index
-// Only real part is reordered since imaginary is just zeros
-static void sort(int *f_real, int N)
-{
-    int f2_real[SAMPLES_COUNT_MAX];
-
-    for (int i = 0; i < N; i++)
-    {
-        // Calculate reverse index
-        int j, rev = 0;
-        for (j = 1; j <= log2(N); j++)
-        {
-            if (i & (1 << (int)(log2(N) - j)))
-                rev |= 1 << (j - 1);
-        }
-
-        f2_real[i] = f_real[rev];
+static ssize_t virt_fft_read(struct file *filep, char __user *buffer, size_t len, loff_t *offset) {
+    uint32_t data;
+    // Read from DATAOUT register
+    data = ioread32(VIRT_FFT_BASE_ADDR + DATAOUT);
+    if (copy_to_user(buffer, &data, sizeof(data))) {
+        return -EFAULT;
     }
+    return sizeof(data);
+}
 
-    // Copy ordered arrays
-    for (int j = 0; j < N; j++)
-    {
-        f_real[j] = f2_real[j];
+static ssize_t virt_fft_write(struct file *filep, const char __user *buffer, size_t len, loff_t *offset) {
+    uint32_t data;
+    if (copy_from_user(&data, buffer, sizeof(data))) {
+        return -EFAULT;
+    }
+    // Write to DATAIN register
+    iowrite32(data, VIRT_FFT_BASE_ADDR + DATAIN);
+    return sizeof(data);
+}
+
+static void virt_fft_reset(void) {
+    uint32_t ctrl_value;
+
+    // Read the current value of the CTRL register
+    ctrl_value = ioread32(VIRT_FFT_BASE_ADDR + CTRL);
+
+    // Deassert the EN signal (set EN_FIELD to 0)
+    ctrl_value &= ~EN_FIELD;
+
+    // Write the updated value back to the CTRL register
+    iowrite32(ctrl_value, VIRT_FFT_BASE_ADDR + CTRL);
+
+    // Check if the READY field in the STATUS register is asserted
+    uint32_t status_value = ioread32(VIRT_FFT_BASE_ADDR + STATUS);
+    if (status_value & READY_FIELD) {
+        printk(KERN_INFO "virt_fft: Accelerator reset successfully, READY field asserted\n");
+    } else {
+        printk(KERN_WARNING "virt_fft: Accelerator reset failed, READY field not asserted\n");
     }
 }
 
-// Function to perform the Cooley-Tukey FFT
-static void FFT(int *f_real, int *f_imag, int N)
-{
-    // Create real and imaginary vectors
-    double W_real[SAMPLES_COUNT_MAX / 2 * sizeof(double)];
-    double W_imag[SAMPLES_COUNT_MAX / 2 * sizeof(double)];
-
-    // Order arrays
-    sort(f_real, N);
-
-    // Compute complex numbers twiddle factors
-    W_real[1] = cos(-2. * M_PI / N);
-    W_imag[1] = sin(-2. * M_PI / N);
-    W_real[0] = 1.0;
-    W_imag[0] = 0.0;
-
-    for (int i = 2; i < N / 2; i++)
-    {
-        W_real[i] = W_real[1] * W_real[i - 1] - W_imag[1] * W_imag[i - 1];
-        W_imag[i] = W_imag[1] * W_real[i - 1] + W_real[1] * W_imag[i - 1];
-    }
-
-    int n = 1;
-    int a = N / 2;
-    for (int j = 0; j < log2(N); j++)
-    {
-        for (int i = 0; i < N; i++)
-        {
-            if (!(i & n))
-            {
-                int temp_real = f_real[i];
-                int temp_imag = f_imag[i];
-                int temp_real2 = f_real[i + n];
-                int temp_imag2 = f_imag[i + n];
-
-                double W_real_val = W_real[(i * a) % (n * a)];
-                double W_imag_val = W_imag[(i * a) % (n * a)];
-
-                f_real[i] = temp_real + W_real_val * temp_real2 - W_imag_val * temp_imag2;
-                f_imag[i] = temp_imag + W_real_val * temp_imag2 + W_imag_val * temp_real2;
-
-                f_real[i + n] = temp_real - W_real_val * temp_real2 + W_imag_val * temp_imag2;
-                f_imag[i + n] = temp_imag - W_real_val * temp_imag2 - W_imag_val * temp_real2;
-            }
-        }
-        n *= 2;
-        a = a / 2;
-    }
+static int virt_fft_configure(uint32_t cfg_value) {
+    // Write the configuration to the CFG0 register
+    iowrite32(cfg_value, VIRT_FFT_BASE_ADDR + CFG0);
+    printk(KERN_INFO "virt_fft: Configuration set to 0x%x\n", cfg_value);
+    return 0;
 }
 
-// ------------------- FFT ALOGITHM END -------------------
+static int virt_fft_load_sample(uint32_t sample_value) {
+    uint32_t status_value;
 
-// Just a wrapper around the Cooley-Tukey FFT
-static void computeFFT(VirtFftAccState *s)
-{
-    // Real and imaginary parts of signal
-    int wave_samples_real[SAMPLES_COUNT_MAX];
-    int wave_samples_imag[SAMPLES_COUNT_MAX];
+    // Write the sample value to the DATAIN register
+    iowrite32(sample_value, VIRT_FFT_BASE_ADDR + DATAIN);
 
-    // Copy the real values from the original sample
-    for (int i = 0; i < nSamples; i++)
-    {
-        wave_samples_real[i] = samplesInOut[i];
-        wave_samples_imag[i] = 0; // Imaginary part is 0 initially
-    }
+    // Trigger the SAM field in the CTRL register
+    uint32_t ctrl_value = ioread32(VIRT_FFT_BASE_ADDR + CTRL);
+    ctrl_value |= SAM_FIELD;
+    iowrite32(ctrl_value, VIRT_FFT_BASE_ADDR + CTRL);
 
-    // Number of elements of vector is guaranteed to be power of two
-    FFT(wave_samples_real, wave_samples_imag, nSamples);
+    // Wait for the SCPLT field to be asserted
+    do {
+        status_value = ioread32(VIRT_FFT_BASE_ADDR + STATUS);
+    } while (!(status_value & SCPLT_FIELD));
 
-    // Compute magnitudes
-    for (int i = 0; i < nSamples; i++)
-        samplesInOut[i] = sqrt(pow(wave_samples_real[i], 2) + pow(wave_samples_imag[i], 2));
+    printk(KERN_INFO "virt_fft: Sample loaded successfully, SCPLT field asserted\n");
 
-    // Find max and min
-    int min_val = samplesInOut[0];
-    int max_val = 0;
-
-    for (int i = 1; i < nSamples; i++)
-    {
-        if (samplesInOut[i] < min_val)
-        {
-            min_val = samplesInOut[i];
-        }
-        if (samplesInOut[i] > max_val)
-        {
-            max_val = samplesInOut[i];
-        }
-    }
-
-    // Scale all samples
-    for (int i = 0; i < nSamples; i++)
-    {
-        if (max_val == min_val)
-            samplesInOut[i] = pow(2, (s->cfg & SMODE_FIELD) + 4 - 1);
-        else
-            samplesInOut[i] = (float)(samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->cfg & SMODE_FIELD) + 4);
-    }
-
-    return;
-}
-
-// Set IRQ method
-static void virt_fft_acc_set_irq(VirtFftAccState *s, int irq)
-{
-    // Set interrupt status
-    // s->status = (s->status & ~irq) | irq;
-    s->status = s->status | irq;
-
-    // Trigger interrupt if enabled
-    if (s->ctrl & IEN_FIELD)
-    {
-        qemu_set_irq(s->irq, 1);
-    }
-}
-
-// Clear IRQ method
-static void virt_fft_acc_clr_irq(VirtFftAccState *s)
-{
-    // Always clear
-    qemu_set_irq(s->irq, 0);
-}
-
-static void virt_fft_acc_sample_data(VirtFftAccState *s)
-{
-    // Depending on sample size chosen
-    if (s->cfg & SMODE_FIELD)
-    {
-        // 16-bit samples
-
-        // First sample in (DATAIN_LOW)
-        samplesInOut[sampleIdx] = s->datain & 0x00ff;
-        sampleIdx++;
-
-        // Second sample in (DATAIN_HIGH)
-        samplesInOut[sampleIdx] = s->datain & 0xff00;
-        sampleIdx++;
-    }
-    else
-    {
-        // 32-bit samples
-        samplesInOut[sampleIdx] = s->datain;
-        sampleIdx++;
-    }
-}
-
-// Memory read implementation
-static uint64_t virt_fft_acc_read(void *opaque, hwaddr offset, unsigned size)
-{
-    // Cast to device struct
-    VirtFftAccState *s = (VirtFftAccState *)opaque;
-
-    // Return registers content
-    switch (offset)
-    {
-    case DEVID:
-        return ID;
-    case CTRL:
-        return s->ctrl;
-    case CFG0:
-        return s->cfg;
-    case DATAOUT:
-        return s->dataout;
-    case STATUS:
-        // Deassert interrupt
-        virt_fft_acc_clr_irq(s);
-
-        // Save return value
-        uint64_t status = s->status;
-
-        // Reset clear-on-read fields
-        s->status = s->status & (EMPTY_FIELD | FULL_FIELD);
-
-        return status;
-
-    default:
-        break;
+    // Check if the FULL field is asserted
+    if (status_value & FULL_FIELD) {
+        printk(KERN_INFO "virt_fft: All samples loaded, FULL field asserted\n");
     }
 
     return 0;
 }
 
-// Memory write implementation
-static void virt_fft_acc_write(void *opaque, hwaddr offset, uint64_t value,
-                               unsigned size)
-{
-    // Cast to device struct
-    VirtFftAccState *s = (VirtFftAccState *)opaque;
+static int virt_fft_process_samples(void) {
+    uint32_t status_value;
 
-    switch (offset)
-    {
-    case CTRL:
-        // Copy only EN fields
-        s->ctrl = (int)value & (EN_FIELD | IEN_FIELD);
+    // Trigger the PRC field in the CTRL register
+    uint32_t ctrl_value = ioread32(VIRT_FFT_BASE_ADDR + CTRL);
+    ctrl_value |= PRC_FIELD;
+    iowrite32(ctrl_value, VIRT_FFT_BASE_ADDR + CTRL);
 
-        // Load data or process
-        if (value & SAM_FIELD)
-        {
-            // Proceed according to device status
-            if (s->ctrl & EN_FIELD)
-            {
-                // Sample datain
-                if (sampleIdx < nSamples)
-                {
-                    virt_fft_acc_sample_data(s);
-                }
+    // Wait for the PCPLT field to be asserted
+    do {
+        status_value = ioread32(VIRT_FFT_BASE_ADDR + STATUS);
+    } while (!(status_value & PCPLT_FIELD));
 
-                // Interrupt when op complete and if full
-                virt_fft_acc_set_irq(s, SCPLT_FIELD | (sampleIdx == nSamples ? FULL_FIELD : 0));
+    printk(KERN_INFO "virt_fft: Samples processed successfully, PCPLT field asserted\n");
 
-                // Feedback
-                if (sampleIdx == nSamples)
-                    printf("All %0d samples loaded, full and ready to process", nSamples);
-            }
-            else
-            {
-                // Download dataout
-                if (resultIdx < nSamples / 2)
-                {
-                    s->dataout = samplesInOut[resultIdx];
-                    resultIdx++;
-                }
+    return 0;
+}
 
-                // Interrupt when op complete
-                virt_fft_acc_set_irq(s, SCPLT_FIELD | (resultIdx == nSamples / 2 ? EMPTY_FIELD : 0));
+static int virt_fft_read_result(uint32_t *result) {
+    uint32_t status_value;
 
-                // Feedback
-                if (resultIdx < nSamples / 2)
-                    printf("All %0d samples downloaded, empty", nSamples / 2);
-            }
-        }
-        else if (value & PRC_FIELD)
-        {
-            // Run FFT algorithm
-            computeFFT(s);
+    // Trigger the SAM field in the CTRL register
+    uint32_t ctrl_value = ioread32(VIRT_FFT_BASE_ADDR + CTRL);
+    ctrl_value |= SAM_FIELD;
+    iowrite32(ctrl_value, VIRT_FFT_BASE_ADDR + CTRL);
 
-            // Interrupt when op complete
-            virt_fft_acc_set_irq(s, PCPLT_FIELD);
-        }
+    // Wait for the SCPLT field to be asserted
+    do {
+        status_value = ioread32(VIRT_FFT_BASE_ADDR + STATUS);
+    } while (!(status_value & SCPLT_FIELD));
 
-        // Reset operations
-        if (s->ctrl & EN_FIELD)
-        {
-            // Enabled, reset download counter
-            resultIdx = 0;
-        }
-        else
-        {
-            // Reset upload counter
-            sampleIdx = 0;
+    // Read the result from the DATAOUT register
+    *result = ioread32(VIRT_FFT_BASE_ADDR + DATAOUT);
 
-            // Set status register
-            s->status = s->status | READY_FIELD;
-        }
-        break;
+    printk(KERN_INFO "virt_fft: Result read successfully, SCPLT field asserted\n");
 
-    case CFG0:
-        // Copy fields
-        s->cfg = (int)value;
-
-        // Set samples count
-        nSamples = (uint16_t)pow(2, (double)(((s->cfg & NSAMPLES_MASK) >> NSAMPLES_SH) + 4));
-        break;
-
-    case DATAIN:
-        // Copy value to register
-        s->datain = value;
-        break;
-
-    default:
-        break;
+    // Check if the EMPTY field is asserted
+    if (status_value & EMPTY_FIELD) {
+        printk(KERN_INFO "virt_fft: All results read, EMPTY field asserted\n");
     }
+
+    return 0;
 }
 
-static const MemoryRegionOps virt_fft_acc_ops = {
-    .read = virt_fft_acc_read,
-    .write = virt_fft_acc_write,
-    .endianness = DEVICE_NATIVE_ENDIAN,
-};
+#define VIRT_FFT_IOCTL_RESET _IO('V', 1)       // Reset the accelerator
+#define VIRT_FFT_IOCTL_CONFIGURE _IOW('V', 2, uint32_t) // Configure the device
+#define VIRT_FFT_IOCTL_LOAD_SAMPLE _IOW('V', 3, uint32_t) // Load a sample
+#define VIRT_FFT_IOCTL_PROCESS _IO('V', 4)     // Process the samples
+#define VIRT_FFT_IOCTL_READ_RESULT _IOR('V', 5, uint32_t) // Read a result
 
-static void virt_fft_acc_realize(DeviceState *d, Error **errp)
-{
-    VirtFftAccState *s = VIRT_FFT_ACC(d);
-    SysBusDevice *sbd = SYS_BUS_DEVICE(d);
-
-    memory_region_init_io(&s->iomem, OBJECT(s), &virt_fft_acc_ops, s,
-                          TYPE_VIRT_FFT_ACC, 0x200);
-    sysbus_init_mmio(sbd, &s->iomem);
-    sysbus_init_irq(sbd, &s->irq);
-
-    s->id = ID;
-    s->ctrl = 0;
+static long virt_fft_ioctl(struct file *filep, unsigned int cmd, unsigned long arg) {
+    uint32_t value;
+    switch (cmd) {
+        case VIRT_FFT_IOCTL_RESET: // Reset the accelerator
+            virt_fft_reset();
+            break;
+        case VIRT_FFT_IOCTL_CONFIGURE: // Configure the device
+            if (copy_from_user(&value, (uint32_t __user *)arg, sizeof(value))) {
+                return -EFAULT;
+            }
+            virt_fft_configure(value);
+            break;
+        case VIRT_FFT_IOCTL_LOAD_SAMPLE: // Load a sample
+            if (copy_from_user(&value, (uint32_t __user *)arg, sizeof(value))) {
+                return -EFAULT;
+            }
+            virt_fft_load_sample(value);
+            break;
+        case VIRT_FFT_IOCTL_PROCESS: // Process the samples
+            virt_fft_process_samples();
+            break;
+        case VIRT_FFT_IOCTL_READ_RESULT: // Read a result
+            if (virt_fft_read_result(&value) < 0) {
+                return -EFAULT;
+            }
+            if (copy_to_user((uint32_t __user *)arg, &value, sizeof(value))) {
+                return -EFAULT;
+            }
+            break;
+        default:
+            return -EINVAL;
+    }
+    return 0;
 }
 
-static void virt_fft_acc_class_init(ObjectClass *klass, void *data)
-{
-    DeviceClass *dc = DEVICE_CLASS(klass);
+static int __init virt_fft_init(void) {
+    printk(KERN_INFO "virt_fft: Initializing the virtual FFT accelerator driver\n");
 
-    dc->realize = virt_fft_acc_realize;
+    // Dynamically allocate a major number for the device
+    majorNumber = register_chrdev(0, DEVICE_NAME, &fops);
+    if (majorNumber < 0) {
+        printk(KERN_ALERT "virt_fft failed to register a major number\n");
+        return majorNumber;
+    }
+    printk(KERN_INFO "virt_fft: registered correctly with major number %d\n", majorNumber);
+
+    // Register the device class
+    virt_fft_class = class_create(THIS_MODULE, CLASS_NAME);
+    if (IS_ERR(virt_fft_class)) {
+        unregister_chrdev(majorNumber, DEVICE_NAME);
+        printk(KERN_ALERT "Failed to register device class\n");
+        return PTR_ERR(virt_fft_class);
+    }
+    printk(KERN_INFO "virt_fft: device class registered correctly\n");
+
+    // Register the device driver
+    virt_fft_device = device_create(virt_fft_class, NULL, MKDEV(majorNumber, 0), NULL, DEVICE_NAME);
+    if (IS_ERR(virt_fft_device)) {
+        class_destroy(virt_fft_class);
+        unregister_chrdev(majorNumber, DEVICE_NAME);
+        printk(KERN_ALERT "Failed to create the device\n");
+        return PTR_ERR(virt_fft_device);
+    }
+    printk(KERN_INFO "virt_fft: device class created correctly\n");
+
+    return 0;
 }
 
-static const TypeInfo virt_fft_acc_info = {
-    .name = TYPE_VIRT_FFT_ACC,
-    .parent = TYPE_SYS_BUS_DEVICE,
-    .instance_size = sizeof(VirtFftAccState),
-    .class_init = virt_fft_acc_class_init,
-};
-
-static void virt_fft_acc_register_types(void)
-{
-    type_register_static(&virt_fft_acc_info);
+static void __exit virt_fft_exit(void) {
+    device_destroy(virt_fft_class, MKDEV(majorNumber, 0));
+    class_unregister(virt_fft_class);
+    class_destroy(virt_fft_class);
+    unregister_chrdev(majorNumber, DEVICE_NAME);
+    printk(KERN_INFO "virt_fft: Goodbye from the virtual FFT accelerator driver!\n");
 }
 
-type_init(virt_fft_acc_register_types)
+module_init(virt_fft_init);
+module_exit(virt_fft_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Your Name");
+MODULE_DESCRIPTION("A simple Linux driver for the virtual FFT accelerator");
+MODULE_VERSION("0.1");
