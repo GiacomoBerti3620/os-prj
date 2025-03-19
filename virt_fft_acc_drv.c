@@ -17,11 +17,6 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/sysfs.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 
 /* Register map */
 #define DEVID 0x000
@@ -327,7 +322,9 @@ void fft_operation(int n_samples, int s_mode,
     e_controlField my_controlField;
     e_datainField my_datainField;
 
-    fd = open("/dev/virt_fft_acc", O_RDWR);
+    dev = open("/dev/virt_fft_acc", O_RDWR);
+
+    struct device fd = &dev;
 
     vf_store_ctrl(&fd, "0", CTRL_EN);
 
