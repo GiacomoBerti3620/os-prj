@@ -214,9 +214,9 @@ static int vf_store_cfg(struct device *dev,
     switch (store_field)
     {
     case CFG_SMODE:
-        return vf_store_cfg_smode(dev, attr, buf);
+        return vf_store_cfg_smode(dev, buf);
     case CFG_NSAMPLES:
-        return vf_store_cfg_nsamples(dev, attr, buf);
+        return vf_store_cfg_nsamples(dev, buf);
     default:
         return -1;
     }
@@ -329,7 +329,7 @@ void fft_operation(int n_samples, int s_mode,
     switch (n_samples)
     {
     case 16:
-        n_samples_char = "0";
+        n_samples_char = char 0;
         break;
     case 32:
         n_samples_char = "1";
