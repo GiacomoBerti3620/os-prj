@@ -24,7 +24,7 @@ static const MemMapEntry base_memmap[] = {
     /* ...repeating for a total of NUM_VIRTIO_TRANSPORTS, each of that size */
 
     // Custom memory mapping for FFT Cusotm Accelerator Device
-    [VIRT_FFT_ACC] =            { 0x0b000000, 0x00000100 },
+    [VIRT_FFT_ACC] =            { 0x0b000000, 0x00000200 },
 
     [VIRT_PLATFORM_BUS] =       { 0x0c000000, 0x02000000 },
 

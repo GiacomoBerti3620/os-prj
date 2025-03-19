@@ -8,7 +8,7 @@
 
 #define DEVICE_NAME "fft_acc"
 #define FFT_ACC_BASE_ADDR 0x0b000000
-#define FFT_ACC_REG_SIZE  0x100
+#define FFT_ACC_REG_SIZE  0x200
 
 // Register offsets
 #define DEVID   0x000
