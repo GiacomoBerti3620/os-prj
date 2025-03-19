@@ -3,7 +3,7 @@ DESCRIPTION = "Copy test files"
 LICENSE = "CLOSED"
 
 SRC_URI += " \
-    file://fft.c \
+    file://fft_test.c \
 "
 
 S = "${WORKDIR}/sources"
