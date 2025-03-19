@@ -315,7 +315,7 @@ void fft_operation(int n_samples, int s_mode,
                    unsigned long *data_in, unsigned long *data_out)
 {
     int fd, i;
-    char n_samples_char, s_mode_char;
+    const char* n_samples_char, s_mode_char;
     char buf0[];
     char buf1[];
     e_configField my_configField;
@@ -329,7 +329,7 @@ void fft_operation(int n_samples, int s_mode,
     switch (n_samples)
     {
     case 16:
-        n_samples_char = char 0;
+        n_samples_char = (char *) 0;
         break;
     case 32:
         n_samples_char = "1";
