@@ -281,20 +281,20 @@ static u32 vf_read_dataout(struct device *dev)
     return val;
 }
 
-static DEVICE_ATTR(id, S_IRUGO, vf_show_id, NULL);
-static DEVICE_ATTR(ctrl, S_IRUGO | S_IWUSR, NULL, vf_store_ctrl);
-static DEVICE_ATTR(cfg, S_IRUGO | S_IWUSR, NULL, vf_store_cfg);
-static DEVICE_ATTR(datain, S_IWUSR, NULL, vf_write_data);
-static DEVICE_ATTR(dataout, S_IRUGO, vf_read_dataout, NULL);
-static DEVICE_ATTR(status, S_IRUGO, vf_show_status, NULL);
+// static DEVICE_ATTR(id, S_IRUGO, vf_show_id, NULL);
+// static DEVICE_ATTR(ctrl, S_IRUGO | S_IWUSR, NULL, vf_store_ctrl);
+// static DEVICE_ATTR(cfg, S_IRUGO | S_IWUSR, NULL, vf_store_cfg);
+// static DEVICE_ATTR(datain, S_IWUSR, NULL, vf_write_data);
+// static DEVICE_ATTR(dataout, S_IRUGO, vf_read_dataout, NULL);
+// static DEVICE_ATTR(status, S_IRUGO, vf_show_status, NULL);
 
 static struct attribute *vf_attributes[] = {
-    &dev_attr_id.attr,
-    &dev_attr_ctrl.attr,
-    &dev_attr_cfg.attr,
-    &dev_attr_datain.attr,
-    &dev_attr_dataout.attr,
-    &dev_attr_status.attr,
+    // &dev_attr_id.attr,
+    // &dev_attr_ctrl.attr,
+    // &dev_attr_cfg.attr,
+    // &dev_attr_datain.attr,
+    // &dev_attr_dataout.attr,
+    // &dev_attr_status.attr,
     NULL,
 };
 
