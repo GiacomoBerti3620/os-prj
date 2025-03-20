@@ -113,6 +113,13 @@ static int fft_acc_probe(struct pci_dev *pdev, const struct pci_device_id *id)
     void __iomem *ptr_bar0;
     mydev.pdev = pdev;
 
+    status = register_chrdev(DEVNR, DEVNRNAME,  &fops);
+    if (status < 0)
+    {
+        printk("fft_acc_drv - Error registering Device numbers\n");
+        return status;
+    }
+
     status = pcim_enable_device(pdev);
     if (status != 0)
     {
@@ -133,6 +140,7 @@ static int fft_acc_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 static void fft_acc_remove(struct pci_dev *pdev)
 {
     printk("fft_acc_drv - Removing the device\n");
+    unregister_chrdevn(DEVNR, DEVNRNAME);
 }
 
 static struct pci_driver fft_acc_driver = {
