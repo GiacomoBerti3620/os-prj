@@ -63,7 +63,7 @@ DECLARE_INSTANCE_CHECKER(PcifftdevState, PCIFFTDEV, TYPE_PCI_CUSTOM_DEVICE)
     struct PcifftdevState{
         PCIDevice pdev;
         MemoryRegion mmio_bar0;
-        uint32_t bar0[32]; // must be pow2
+        uint32_t bar0[8]; // must be pow2
         // Sample/Download indices
         uint16_t sampleIdx;
         uint16_t resultIdx;
@@ -369,16 +369,15 @@ static void pci_pcifftdev_realize(PCIDevice *pdev, Error **errp)
 	PcifftdevState *pcifftdev = PCIFFTDEV(pdev);
 	uint8_t *pci_conf = pdev->config;
 
-	pci_config_set_interrupt_pin(pci_conf, 1);
+	pci_config_set_interrupt_pin(pci_conf, 1); // not used
 
 	///initial configuration of devices registers.
-	memset(pcifftdev->bar0, 0, 32*4); // must be pow2
-	pcifftdev->bar0[DEVID/4] = 0xcafeaffe;
-
+	memset(pcifftdev->bar0, 0, 8*4); // must be pow2
+	pcifftdev->bar0[DEVID/4] = 0xcafe;
 	// Initialize an I/O memory region(pcifftdev->mmio). 
 	// Accesses to this region will cause the callbacks 
 	// of the pcifftdev_mmio_ops to be called.
-	memory_region_init_io(&pcifftdev->mmio_bar0, OBJECT(pcifftdev), &pcifftdev_bar0_mmio_ops, pcifftdev, "pcifftdev-mmio", 32*4); // must be pow2
+	memory_region_init_io(&pcifftdev->mmio_bar0, OBJECT(pcifftdev), &pcifftdev_bar0_mmio_ops, pcifftdev, "pcifftdev-mmio", 8*4); // must be pow2
 	// registering the pdev and all of the above configuration 
 	// (actually filling a PCI-IO region with our configuration.
 	pci_register_bar(pdev, 0, PCI_BASE_ADDRESS_SPACE_MEMORY, &pcifftdev->mmio_bar0);
