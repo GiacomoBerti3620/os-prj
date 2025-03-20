@@ -93,10 +93,12 @@ int main() {
     u32 value;
     u32 samples[128];
 
+    printf("Generationg samples.\n");
     for (int i = 0; i < 128; i++) {
         samples[i] = (u32)(sin(2 * M_PI * i / 128) * 1000);
     }
 
+    printf("Opening the device file.\n");
     // Open the device file
     fd = open(DEVICE_PATH, O_RDWR);
     if (fd < 0) {
