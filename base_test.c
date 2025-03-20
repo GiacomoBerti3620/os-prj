@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <string.h>
 #include <linux/types.h>
+typedef uint32_t u32;
 
 #define DEVICE_PATH "/dev/fft_acc"  // Assuming the device node is created at /dev/fft_accdev
 
