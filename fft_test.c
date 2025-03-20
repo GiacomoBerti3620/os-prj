@@ -105,7 +105,7 @@ int main() {
         perror("Failed to open the device");
         return EXIT_FAILURE;
     }
-
+    printf("Device reset.\n");
     // Step 1: Reset the device by deasserting EN
     value = 0x0;  // EN = 0
     ret = set_control_flag(fd, 0x0, 0x1);
