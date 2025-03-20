@@ -28,26 +28,26 @@
 #define DEVID 0x0
 #define ID 0xcafe
 
-#define CTRL 0x4
+#define CTRL 0x1
 #define EN_FIELD ((uint32_t)1U << 0)
 #define IEN_FIELD ((uint32_t)1U << 1)
 #define SAM_FIELD ((uint32_t)1U << 2)
 #define PRC_FIELD ((uint32_t)1U << 3)
 
-#define CFG0 0x8
+#define CFG0 0x2
 #define SMODE_FIELD ((uint32_t)1U << 0)
 #define NSAMPLES_MASK 0x000e
 #define NSAMPLES_SH 0x1
 
-#define DATAIN 0xc
+#define DATAIN 0x3
 #define DATAIN_H_MASK 0xff00
 #define DATAIN_H_SH 0x8
 #define DATAIN_L_MASK 0x00ff
 #define DATAIN_L_SH 0x0
 
-#define DATAOUT 0x10
+#define DATAOUT 0x4
 
-#define STATUS 0x20
+#define STATUS 0x5
 #define READY_FIELD ((uint32_t)1U << 0)
 #define SCPLT_FIELD ((uint32_t)1U << 1)
 #define PCPLT_FIELD ((uint32_t)1U << 2)
@@ -64,7 +64,7 @@ DECLARE_INSTANCE_CHECKER(PcifftdevState, PCIFFTDEV, TYPE_PCI_CUSTOM_DEVICE)
     struct PcifftdevState{
         PCIDevice pdev;
         MemoryRegion mmio_bar0;
-        uint32_t bar0[32]; // must be pow2
+        uint32_t bar0[8]; // must be pow2
         // Sample/Download indices
         uint16_t sampleIdx;
         uint16_t resultIdx;
@@ -373,7 +373,7 @@ static void pci_pcifftdev_realize(PCIDevice *pdev, Error **errp)
 	pci_config_set_interrupt_pin(pci_conf, 1);
 
 	///initial configuration of devices registers.
-	memset(pcifftdev->bar0, 0, 32*4); // must be pow2
+	memset(pcifftdev->bar0, 0, 8*4); // must be pow2
 	pcifftdev->bar0[DEVID] = 0xcafeaffe;
 
 	// Initialize an I/O memory region(pcifftdev->mmio). 
