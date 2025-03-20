@@ -174,6 +174,6 @@ static struct pci_driver fft_acc_driver = {
 //module_init(fft_acc_init);
 //module_exit(fft_acc_exit);
 
-module_pci_register(fft_acc_driver);
+module_pci_driver(fft_acc_driver);
 
 MODULE_LICENSE("GPL");
