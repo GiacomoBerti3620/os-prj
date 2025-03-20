@@ -408,7 +408,7 @@ static void pcifftdev_class_init(ObjectClass *class, void *data)
 	//definition of uninit func().
 	k->exit = pci_pcifftdev_uninit;
 	k->vendor_id = PCI_VENDOR_ID_QEMU;
-	k->device_id = 0xfacecafe; //our device id, 'beef' hexadecimal
+	k->device_id = ID; //our device id, 'beef' hexadecimal
 	k->revision = 0x10;
 	k->class_id = PCI_CLASS_OTHERS;
 
