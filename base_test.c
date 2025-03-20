@@ -5,6 +5,7 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <string.h>
+#include <linux/types.h>
 
 #define DEVICE_PATH "/dev/fft_acc"  // Assuming the device node is created at /dev/fft_accdev
 

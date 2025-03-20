@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <string.h>
 #include <math.h>
+#include <linux/types.h>
 
 #define DEVICE_PATH "/dev/fft_acc"  // Device node path
 
