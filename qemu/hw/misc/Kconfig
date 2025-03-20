@@ -27,6 +27,7 @@ config PCI_TESTDEV
 
 config PCI_FFTDEV
     bool
+    default y if TEST_DEVICES
     depends on PCI
 
 config EDU
