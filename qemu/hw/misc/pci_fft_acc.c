@@ -9,6 +9,7 @@
 #include <complex.h>
 
 #define SAMPLES_COUNT_MAX 2048
+#define TYPE_PCI_CUSTOM_DEVICE "pci-fft-acc"
 
 // QEMU Device implementation
 #include "qemu/osdep.h"
@@ -21,8 +22,6 @@
 #include "qemu/main-loop.h"
 #include "qemu/module.h"
 #include "qapi/visitor.h"
-
-#define TYPE_PCI_CUSTOM_DEVICE "pci-fft-acc"
 
 /* Register map */
 #define DEVID 0x0
@@ -408,7 +407,7 @@ static void pcifftdev_class_init(ObjectClass *class, void *data)
 	//definition of uninit func().
 	k->exit = pci_pcifftdev_uninit;
 	k->vendor_id = PCI_VENDOR_ID_QEMU;
-	k->device_id = ID; //our device id, 'beef' hexadecimal
+	k->device_id = ID; //our device id, 'cafe' hexadecimal
 	k->revision = 0x10;
 	k->class_id = PCI_CLASS_OTHERS;
 
