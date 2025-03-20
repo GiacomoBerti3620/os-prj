@@ -53,7 +53,7 @@ static irqreturn_t fft_acc_irq_handler(int irq_nr, void *data)
 
 static int fft_acc_open(struct inode *inode, struct file *file)
 {
-    struct fft_accdev *echo;
+    struct fft_accdev *fft_acc;
     dev_t dev_nr = inode->i_rdev;
 
     list_for_each_entry(fft_acc, &card_list, list)
@@ -210,7 +210,7 @@ static int fft_acc_probe(struct pci_dev *pdev, const struct pci_device_id *id)
         goto fdev;
     }
 
-    pci_set_drvdata(pdev, echo);
+    pci_set_drvdata(pdev, fft_acc);
 
     status = pci_alloc_irq_vectors(pdev, 1, 1, PCI_IRQ_ALL_TYPES);
     if (status != 1)
@@ -223,8 +223,8 @@ static int fft_acc_probe(struct pci_dev *pdev, const struct pci_device_id *id)
     irq_nr = pci_irq_vector(pdev, 0);
     printk("fft_acc_drv - IRQ Number: %d\n", irq_nr);
 
-    status = devm_request_irq(&pdev->dev, irq_nr, echo_irq_handler, 0,
-                              "fft_acc-irq", echo);
+    status = devm_request_irq(&pdev->dev, irq_nr, fft_acc_irq_handler, 0,
+                              "fft_acc-irq", fft_acc);
     if (status != 0)
     {
         printk("fft_acc_drv - Error requesting interrupt\n");
