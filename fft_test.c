@@ -22,8 +22,6 @@
 #define SET_CFG0 0x60
 #define SET_DATAIN 0x70
 
-#define M_PI 3.14
-
 typedef uint32_t u32;
 
 // Helper function to read the STATUS register
