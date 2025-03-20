@@ -373,7 +373,7 @@ static void pci_pcifftdev_realize(PCIDevice *pdev, Error **errp)
 	pci_config_set_interrupt_pin(pci_conf, 1);
 
 	///initial configuration of devices registers.
-	memset(pcifftdev->bar0, 0, 32); // must be pow2
+	memset(pcifftdev->bar0, 0, 32*4); // must be pow2
 	pcifftdev->bar0[DEVID] = 0xcafeaffe;
 
 	// Initialize an I/O memory region(pcifftdev->mmio). 
