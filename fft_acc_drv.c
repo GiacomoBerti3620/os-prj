@@ -6,7 +6,7 @@
 #include <linux/device.h>
 #include <linux/slab.h>
 
-#define DEVICE_NAME "virt_fft_acc"
+#define DEVICE_NAME "virt-fft-acc"
 #define CLASS_NAME "virt_fft"
 
 static int majorNumber;
@@ -15,7 +15,7 @@ static struct device* virt_fft_device = NULL;
 static struct cdev virt_fft_cdev;
 
 // Define the base address of the device
-#define VIRT_FFT_BASE_ADDR 0x10000000
+#define VIRT_FFT_BASE_ADDR 0x0b000000
 
 // Define the register offsets
 #define DEVID 0x000

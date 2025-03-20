@@ -9,7 +9,7 @@
 #include "qemu/module.h"
 #include "qapi/visitor.h"
 
-#define TYPE_PCI_CUSTOM_DEVICE "pci-echodev"
+#define TYPE_PCI_CUSTOM_DEVICE "pci-fftdev"
 
 #define ID_REGISTER        0x0   
 #define INV_REGISTER       0x4
@@ -33,6 +33,7 @@ DECLARE_INSTANCE_CHECKER(PciechodevState, PCIECHODEV, TYPE_PCI_CUSTOM_DEVICE)
 		MemoryRegion mmio_bar1;
 		uint32_t bar0[16];
 		uint8_t bar1[4096];
+
 		struct dma_state {
 			dma_addr_t src;
 			dma_addr_t dst;
@@ -273,9 +274,9 @@ static void pci_custom_device_register_types(void)
 	static const TypeInfo custom_pci_device_info = {
 		.name          = TYPE_PCI_CUSTOM_DEVICE,
 		.parent        = TYPE_PCI_DEVICE,
-		.instance_size = sizeof(PciechodevState),
-		.instance_init = pciechodev_instance_init,
-		.class_init    = pciechodev_class_init,
+		.instance_size = sizeof(PcifftdevState),
+		.instance_init = pcifftdev_instance_init,
+		.class_init    = pcifftdev_class_init,
 		.interfaces = interfaces,
 	};
 	//registers the new type.
