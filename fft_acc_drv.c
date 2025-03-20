@@ -35,24 +35,6 @@ struct fft_accdev
     void __iomem *ptr_bar0;
 } mydev;
 
-/*
-static int fft_acc_mmap(struct file *file, struct vm_area_struct *vma)
-{
-    int status;
-    struct fft_accdev *fft_acc = (struct fft_accdev *)file->private_data;
-
-    vma->vm_pgoff = pci_resource_start(mydev.pdev, 0) >> PAGE_SHIFT;
-
-    status = io_remap_pfn_range(vma, vma->vm_start, vma->vm_pgoff, vma->vm_end - vma->vm_start, vma->vm_page_prot);
-    if (status)
-    {
-        printk("fft_acc_drv - Error allocating device number\n");
-        return -status;
-    }
-    return 0;
-}
-*/
-
 static long int fft_acc_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 {
     struct fft_accdev *fft_acc = &mydev;
@@ -111,37 +93,29 @@ static int fft_acc_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
     int status;
     void __iomem *ptr_bar0;
-    struct fft_accdev *mydev;
+    mydev.pdev = pdev;
 
-    // Allocate memory for the device-specific data
-    mydev = devm_kzalloc(&pdev->dev, sizeof(struct fft_accdev), GFP_KERNEL);
-    if (!mydev) {
-        printk("fft_acc_drv - Error allocating device memory\n");
-        return -ENOMEM;
+    status = register_chrdev(DEVNR, DEVNRNAME,  &fops);
+    if (status < 0)
+    {
+        printk("fft_acc_drv - Error registering Device numbers\n");
+        return status;
     }
 
-    // Enable the PCI device
     status = pcim_enable_device(pdev);
-    if (status != 0) {
+    if (status != 0)
+    {
         printk("fft_acc_drv - Error enabling device\n");
-        return status; // Return the actual error code
+        return -ENODEV;
     }
 
-    // Map BAR0
-    ptr_bar0 = pcim_iomap(pdev, 0, pci_resource_len(pdev, 0));
-    if (!ptr_bar0) {
+    mydev.ptr_bar0 = pcim_iomap(pdev, 0, pci_resource_len(pdev, 0));
+    if (!mydev.ptr_bar0)
+    {
         printk("fft_acc_drv - Error mapping BAR0\n");
-        return -ENOMEM;
+        return -ENODEV;
     }
 
-    // Store the mapped BAR0 address in the device structure
-    mydev->ptr_bar0 = ptr_bar0;
-    mydev->pdev = pdev;
-
-    // Associate the device-specific data with the PCI device
-    pci_set_drvdata(pdev, mydev);
-
-    printk("fft_acc_drv - Device probed successfully\n");
     return 0;
 }
 
@@ -157,40 +131,6 @@ static struct pci_driver fft_acc_driver = {
     .remove = fft_acc_remove,
     .id_table = fft_acc_ids,
 };
-
-static int __init fft_acc_init(void)
-{
-    int status;
-    dev_t dev_nr = MKDEV(DEVNR, 0);
-
-    // Register the character device
-    status = register_chrdev_region(dev_nr, 1, DEVNRNAME);
-    if (status < 0) {
-        printk("fft_acc_drv - Error registering Device numbers\n");
-        return status;
-    }
-
-    // Register the PCI driver
-    status = pci_register_driver(&fft_acc_driver);
-    if (status < 0) {
-        printk("fft_acc_drv - Error registering driver\n");
-        unregister_chrdev_region(dev_nr, 1);
-        return status;
-    }
-
-    printk("fft_acc_drv - Driver initialized successfully\n");
-    return 0;
-}
-
-static void __exit fft_acc_exit(void)
-{
-	dev_t dev_nr = MKDEV(DEVNR, 0);
-	unregister_chrdev_region(dev_nr, 1);
-	pci_unregister_driver(&fft_acc_driver);
-}
-
-module_init(fft_acc_init);
-module_exit(fft_acc_exit);
 
 module_pci_driver(fft_acc_driver);
 
