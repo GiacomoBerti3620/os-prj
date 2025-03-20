@@ -9,8 +9,6 @@
 #include <linux/types.h>
 #include <stdint.h>
 
-//typedef uint32_t u32;
-
 #define DEVICE_PATH "/dev/fft_acc"  // Device node path
 
 // Define the ioctl commands as in the driver
@@ -25,6 +23,8 @@
 #define SET_DATAIN 0x70
 
 #define M_PI 3.14
+
+typedef uint32_t u32;
 
 // Helper function to read the STATUS register
 u32 read_status(int fd) {

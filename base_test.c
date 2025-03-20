@@ -8,8 +8,6 @@
 #include <linux/types.h>
 #include <stdint.h>
 
-//typedef uint32_t u32;
-
 #define DEVICE_PATH "/dev/fft_acc"  // Assuming the device node is created at /dev/fft_accdev
 
 // Define the ioctl commands as in the driver
@@ -22,6 +20,8 @@
 #define SET_CTRL 0x50
 #define SET_CFG0 0x60
 #define SET_DATAIN 0x70
+
+typedef uint32_t u32;
 
 int main() {
     int fd;
