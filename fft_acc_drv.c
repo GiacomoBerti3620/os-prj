@@ -186,7 +186,7 @@ static void __exit fft_acc_exit(void)
 {
 	dev_t dev_nr = MKDEV(DEVNR, 0);
 	unregister_chrdev_region(dev_nr, 1);
-	pci_unregister_driver(&echo_driver);
+	pci_unregister_driver(&fft_acc_driver);
 }
 
 module_init(fft_acc_init);
