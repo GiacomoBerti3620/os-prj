@@ -198,9 +198,9 @@ static void computeFFT(PcifftdevState *s)
     for (int i = 0; i < s->nSamples; i++)
     {
         if (max_val == min_val)
-            s->samplesInOut[i] = pow(2, (s->bar0[CFG0] & SMODE_FIELD) + 4 - 1);
+            s->samplesInOut[i] = pow(2, (s->bar0[CFG0/4] & SMODE_FIELD) + 4 - 1);
         else
-            s->samplesInOut[i] = (float)(s->samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->bar0[CFG0] & SMODE_FIELD) + 4);
+            s->samplesInOut[i] = (float)(s->samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->bar0[CFG0/4] & SMODE_FIELD) + 4);
     }
 
     return;
@@ -210,22 +210,22 @@ static void computeFFT(PcifftdevState *s)
 static void virt_fft_acc_sample_data(PcifftdevState *s)
 {
     // Depending on sample size chosen
-    if (s->bar0[CFG0] & SMODE_FIELD)
+    if (s->bar0[CFG0/4] & SMODE_FIELD)
     {
         // 16-bit samples
 
         // First sample in (DATAIN_LOW)
-        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN] & 0x00ff;
+        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN/4] & 0x00ff;
         s->sampleIdx++;
 
         // Second sample in (DATAIN_HIGH)
-        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN] & 0xff00;
+        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN/4] & 0xff00;
         s->sampleIdx++;
     }
     else
     {
         // 32-bit samples
-        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN];
+        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN/4];
         s->sampleIdx++;
     }
 }
@@ -331,7 +331,7 @@ static void pcifftdev_bar0_mmio_write(void *opaque, hwaddr offset, uint64_t valu
 
     case CFG0:
         // Copy fields
-        s->bar0[CFG0] = (int)value;
+        s->bar0[CFG0/4] = (int)value;
 
         // Set samples count
         s->nSamples = (uint16_t)pow(2, (double)(((s->bar0[CFG0/4] & NSAMPLES_MASK) >> NSAMPLES_SH) + 4));
