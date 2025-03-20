@@ -232,7 +232,7 @@ static void virt_fft_acc_sample_data(PcifftdevState *s)
 }
 
 // Memory read implementation
-static uint64_t pcifftdev_bar0_mmio_write(void *opaque, hwaddr offset, unsigned size)
+static uint64_t pcifftdev_bar0_mmio_read(void *opaque, hwaddr offset, unsigned size)
 {
     // Cast to device struct
     PcifftdevState *s = (PcifftdevState *)opaque;
@@ -266,7 +266,7 @@ static uint64_t pcifftdev_bar0_mmio_write(void *opaque, hwaddr offset, unsigned 
 }
 
 // Memory write implementation
-static void pcifftdev_bar0_mmio_read(void *opaque, hwaddr offset, uint64_t value,
+static void pcifftdev_bar0_mmio_write(void *opaque, hwaddr offset, uint64_t value,
                                unsigned size)
 {
     // Cast to device struct
