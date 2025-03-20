@@ -199,9 +199,9 @@ static void computeFFT(PcifftdevState *s)
     for (int i = 0; i < s->nSamples; i++)
     {
         if (max_val == min_val)
-            s->samplesInOut[i] = pow(2, (s->cfg & SMODE_FIELD) + 4 - 1);
+            s->samplesInOut[i] = pow(2, (s->bar0[CFG0] & SMODE_FIELD) + 4 - 1);
         else
-            s->samplesInOut[i] = (float)(s->samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->cfg & SMODE_FIELD) + 4);
+            s->samplesInOut[i] = (float)(s->samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->bar0[CFG0] & SMODE_FIELD) + 4);
     }
 
     return;
@@ -211,22 +211,22 @@ static void computeFFT(PcifftdevState *s)
 static void virt_fft_acc_sample_data(PcifftdevState *s)
 {
     // Depending on sample size chosen
-    if (s->cfg & SMODE_FIELD)
+    if (s->bar0[CFG0] & SMODE_FIELD)
     {
         // 16-bit samples
 
         // First sample in (DATAIN_LOW)
-        s->samplesInOut[s->sampleIdx] = s->datain & 0x00ff;
+        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN] & 0x00ff;
         s->sampleIdx++;
 
         // Second sample in (DATAIN_HIGH)
-        s->samplesInOut[s->sampleIdx] = s->datain & 0xff00;
+        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN] & 0xff00;
         s->sampleIdx++;
     }
     else
     {
         // 32-bit samples
-        s->samplesInOut[s->sampleIdx] = s->datain;
+        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN];
         s->sampleIdx++;
     }
 }
@@ -241,20 +241,20 @@ static uint64_t pcifftdev_bar0_mmio_write(void *opaque, hwaddr offset, unsigned 
     switch (offset)
     {
     case DEVID:
-        return s->bar0[0];
+        return s->bar0[DEVID];
     case CTRL:
-        return s->bar0[1];
+        return s->bar0[CTRL];
     case CFG0:
-        return s->bar0[2];
+        return s->bar0[CFG0];
     case DATAOUT:
-        return s->bar0[4];
+        return s->bar0[DATAOUT];
     case STATUS:
 
         // Save return value
-        uint32_t status = s->bar0[5];
+        uint32_t status = s->bar0[STATUS];
 
         // Reset clear-on-read fields
-        s->bar0[5] = s->status & (EMPTY_FIELD | FULL_FIELD);
+        s->bar0[STATUS] =s->bar0[STATUS] & (EMPTY_FIELD | FULL_FIELD);
 
         return status;
 
@@ -276,13 +276,13 @@ static void pcifftdev_bar0_mmio_read(void *opaque, hwaddr offset, uint64_t value
     {
     case CTRL:
         // Copy only EN fields
-        s->bar0[1] = (int)value & (EN_FIELD | IEN_FIELD);
+        s->bar0[CTRL] = (int)value & (EN_FIELD | IEN_FIELD);
 
         // Load data or process
         if (value & SAM_FIELD)
         {
             // Proceed according to device status
-            if (s->ctrl & EN_FIELD)
+            if (s->bar0[CTRL] & EN_FIELD)
             {
                 // Sample datain
                 if (s->sampleIdx < s->nSamples)
@@ -299,7 +299,7 @@ static void pcifftdev_bar0_mmio_read(void *opaque, hwaddr offset, uint64_t value
                 // Download dataout
                 if (s->resultIdx < s->nSamples / 2)
                 {
-                    s->bar0[4] = s->samplesInOut[s->resultIdx];
+                    s->bar0[DATAOUT] = s->samplesInOut[s->resultIdx];
                     s->resultIdx++;
                 }
 
@@ -315,7 +315,7 @@ static void pcifftdev_bar0_mmio_read(void *opaque, hwaddr offset, uint64_t value
         }
 
         // Reset operations
-        if (s->ctrl & EN_FIELD)
+        if (s->bar0[CTRL] & EN_FIELD)
         {
             // Enabled, reset download counter
             s->resultIdx = 0;
@@ -326,21 +326,21 @@ static void pcifftdev_bar0_mmio_read(void *opaque, hwaddr offset, uint64_t value
             s->sampleIdx = 0;
 
             // Set status register
-            s->bar0[5] = s->bar0[5] | READY_FIELD;
+            s->bar0[STATUS] = s->bar0[STATUS] | READY_FIELD;
         }
         break;
 
     case CFG0:
         // Copy fields
-        s->bar0[2] = (int)value;
+        s->bar0[CFG0] = (int)value;
 
         // Set samples count
-        s->nSamples = (uint16_t)pow(2, (double)(((s->bar0[2] & NSAMPLES_MASK) >> NSAMPLES_SH) + 4));
+        s->nSamples = (uint16_t)pow(2, (double)(((s->bar0[CFG0] & NSAMPLES_MASK) >> NSAMPLES_SH) + 4));
         break;
 
     case DATAIN:
         // Copy value to register
-        s->bar0[3] = value;
+        s->bar0[DATAIN] = value;
         break;
 
     default:
@@ -374,7 +374,7 @@ static void pci_pcifftdev_realize(PCIDevice *pdev, Error **errp)
 
 	///initial configuration of devices registers.
 	memset(pcifftdev->bar0, 0, 24);
-	pcifftdev->bar0[0] = 0xcafeaffe;
+	pcifftdev->bar0[DEVID] = 0xcafeaffe;
 
 	// Initialize an I/O memory region(pcifftdev->mmio). 
 	// Accesses to this region will cause the callbacks 
