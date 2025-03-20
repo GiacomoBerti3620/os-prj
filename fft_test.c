@@ -7,7 +7,9 @@
 #include <string.h>
 #include <math.h>
 #include <linux/types.h>
-typedef uint32_t u32;
+#include <stdint.h>
+
+//typedef uint32_t u32;
 
 #define DEVICE_PATH "/dev/fft_acc"  // Device node path
 
