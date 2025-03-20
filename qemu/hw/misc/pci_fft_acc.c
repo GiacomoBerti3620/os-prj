@@ -22,11 +22,11 @@
 #include "qemu/module.h"
 #include "qapi/visitor.h"
 
-#define TYPE_PCI_CUSTOM_DEVICE "virt-fft-acc"
+#define TYPE_PCI_CUSTOM_DEVICE "pci-fft-acc"
 
 /* Register map */
 #define DEVID 0x0
-#define ID 0xfacecafe
+#define ID 0xcafe
 
 #define CTRL 0x1
 #define EN_FIELD ((uint32_t)1U << 0)
@@ -59,9 +59,9 @@ typedef struct PcifftdevState PcifftdevState;
 // This macro provides the instance type cast functions for a QOM type.
 DECLARE_INSTANCE_CHECKER(PcifftdevState, PCIFFTDEV, TYPE_PCI_CUSTOM_DEVICE)
 
-// struct defining/descring the state
-// of the custom pci device.
-struct PcifftdevState{
+    // struct defining/descring the state
+    // of the custom pci device.
+    struct PcifftdevState{
         PCIDevice pdev;
         MemoryRegion mmio_bar0;
         uint32_t bar0[6];
