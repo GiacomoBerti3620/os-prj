@@ -7,7 +7,7 @@
 #include <linux/dmaengine.h>
 
 #define DEVNR 64
-#define DEVNRNAME "fft_accdev"
+#define DEVNRNAME "fft_acc"
 
 #define VID 0x1234
 #define DID 0xcafe
@@ -142,36 +142,38 @@ static struct pci_driver fft_acc_driver = {
     .id_table = fft_acc_ids,
 };
 
-static int __init fft_acc_init(void)
-{
-    int status;
-    dev_t dev_nr = MKDEV(DEVNR, 0);
+♦//static int __init fft_acc_init(void)
+♦//{
+♦//    int status;
+♦//    dev_t dev_nr = MKDEV(DEVNR, 0);
+♦//
+♦//    status = register_chrdev_region(dev_nr, MINORMASK + 1, DEVNRNAME);
+♦//    if (status < 0)
+♦//    {
+♦//        printk("fft_acc_drv - Error registering Device numbers\n");
+♦//        return status;
+♦//    }
+♦//
+♦//    status = pci_register_driver(&fft_acc_driver);
+♦//    if (status < 0)
+♦//    {
+♦//        printk("fft_acc_drv - Error registering driver\n");
+♦//        unregister_chrdev_region(dev_nr, MINORMASK + 1);
+♦//        return status;
+♦//    }
+♦//    return 0;
+♦//}
+♦//
+♦//static void __exit fft_acc_exit(void)
+♦//{
+♦//    dev_t dev_nr = MKDEV(DEVNR, 0);
+♦//    unregister_chrdev_region(dev_nr, MINORMASK + 1);
+♦//    pci_unregister_driver(&fft_acc_driver);
+♦//}
+♦//
+♦//module_init(fft_acc_init);
+♦//module_exit(fft_acc_exit);
 
-    status = register_chrdev_region(dev_nr, MINORMASK + 1, DEVNRNAME);
-    if (status < 0)
-    {
-        printk("fft_acc_drv - Error registering Device numbers\n");
-        return status;
-    }
-
-    status = pci_register_driver(&fft_acc_driver);
-    if (status < 0)
-    {
-        printk("fft_acc_drv - Error registering driver\n");
-        unregister_chrdev_region(dev_nr, MINORMASK + 1);
-        return status;
-    }
-    return 0;
-}
-
-static void __exit fft_acc_exit(void)
-{
-    dev_t dev_nr = MKDEV(DEVNR, 0);
-    unregister_chrdev_region(dev_nr, MINORMASK + 1);
-    pci_unregister_driver(&fft_acc_driver);
-}
-
-module_init(fft_acc_init);
-module_exit(fft_acc_exit);
+module_pci_register(fft_acc_driver);
 
 MODULE_LICENSE("GPL");
