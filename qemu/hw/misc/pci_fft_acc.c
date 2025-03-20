@@ -65,16 +65,14 @@ DECLARE_INSTANCE_CHECKER(PcifftdevState, PCIFFTDEV, TYPE_PCI_CUSTOM_DEVICE)
         MemoryRegion mmio_bar0;
         uint32_t bar0[8]; // must be pow2
         // Sample/Download indices
-        uint16_t sampleIdx;
-        uint16_t resultIdx;
-
-        // Samples vectors
-        uint32_t samplesInOut[SAMPLES_COUNT_MAX];
-
-        // Number of samples selected
-        uint16_t nSamples;
     };
 
+uint16_t sampleIdx;
+uint16_t resultIdx;
+// Samples vectors
+uint32_t samplesInOut[SAMPLES_COUNT_MAX];
+// Number of samples selected
+uint16_t nSamples;
 
 // ------------------- FFT ALOGITHM START -------------------
 
@@ -165,42 +163,42 @@ static void computeFFT(PcifftdevState *s)
     int wave_samples_imag[SAMPLES_COUNT_MAX];
 
     // Copy the real values from the original sample
-    for (int i = 0; i < s->nSamples; i++)
+    for (int i = 0; i < nSamples; i++)
     {
-        wave_samples_real[i] = s->samplesInOut[i];
+        wave_samples_real[i] = samplesInOut[i];
         wave_samples_imag[i] = 0; // Imaginary part is 0 initially
     }
 
     // Number of elements of vector is guaranteed to be power of two
-    FFT(wave_samples_real, wave_samples_imag, s->nSamples);
+    FFT(wave_samples_real, wave_samples_imag, nSamples);
 
     // Compute magnitudes
-    for (int i = 0; i < s->nSamples; i++)
-        s->samplesInOut[i] = sqrt(pow(wave_samples_real[i], 2) + pow(wave_samples_imag[i], 2));
+    for (int i = 0; i < nSamples; i++)
+        samplesInOut[i] = sqrt(pow(wave_samples_real[i], 2) + pow(wave_samples_imag[i], 2));
 
     // Find max and min
-    int min_val = s->samplesInOut[0];
+    int min_val = samplesInOut[0];
     int max_val = 0;
 
-    for (int i = 1; i < s->nSamples; i++)
+    for (int i = 1; i < nSamples; i++)
     {
-        if (s->samplesInOut[i] < min_val)
+        if (samplesInOut[i] < min_val)
         {
-            min_val = s->samplesInOut[i];
+            min_val = samplesInOut[i];
         }
-        if (s->samplesInOut[i] > max_val)
+        if (samplesInOut[i] > max_val)
         {
-            max_val = s->samplesInOut[i];
+            max_val = samplesInOut[i];
         }
     }
 
     // Scale all samples
-    for (int i = 0; i < s->nSamples; i++)
+    for (int i = 0; i < nSamples; i++)
     {
         if (max_val == min_val)
-            s->samplesInOut[i] = pow(2, (s->bar0[CFG0/4] & SMODE_FIELD) + 4 - 1);
+            samplesInOut[i] = pow(2, (s->bar0[CFG0/4] & SMODE_FIELD) + 4 - 1);
         else
-            s->samplesInOut[i] = (float)(s->samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->bar0[CFG0/4] & SMODE_FIELD) + 4);
+            samplesInOut[i] = (float)(samplesInOut[i] - min_val) / (max_val - min_val) * (float)pow(2, (s->bar0[CFG0/4] & SMODE_FIELD) + 4);
     }
 
     return;
@@ -215,18 +213,18 @@ static void virt_fft_acc_sample_data(PcifftdevState *s)
         // 16-bit samples
 
         // First sample in (DATAIN_LOW)
-        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN/4] & 0x00ff;
-        s->sampleIdx++;
+        samplesInOut[sampleIdx] = s->bar0[DATAIN/4] & 0x00ff;
+        sampleIdx++;
 
         // Second sample in (DATAIN_HIGH)
-        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN/4] & 0xff00;
-        s->sampleIdx++;
+        samplesInOut[sampleIdx] = s->bar0[DATAIN/4] & 0xff00;
+        sampleIdx++;
     }
     else
     {
         // 32-bit samples
-        s->samplesInOut[s->sampleIdx] = s->bar0[DATAIN/4];
-        s->sampleIdx++;
+        samplesInOut[sampleIdx] = s->bar0[DATAIN/4];
+        sampleIdx++;
     }
 }
 
@@ -284,27 +282,27 @@ static void pcifftdev_bar0_mmio_write(void *opaque, hwaddr offset, uint64_t valu
             if (s->bar0[CTRL/4] & EN_FIELD)
             {
                 // Sample datain
-                if (s->sampleIdx < s->nSamples)
+                if (sampleIdx < nSamples)
                 {
                     virt_fft_acc_sample_data(s);
                 }
 
                 // Feedback
-                if (s->sampleIdx == s->nSamples)
-                    printf("All %0d samples loaded, full and ready to process", s->nSamples);
+                if (sampleIdx == nSamples)
+                    printf("All %0d samples loaded, full and ready to process", nSamples);
             }
             else
             {
                 // Download dataout
-                if (s->resultIdx < s->nSamples / 2)
+                if (resultIdx < nSamples / 2)
                 {
-                    s->bar0[DATAOUT/4] = s->samplesInOut[s->resultIdx];
-                    s->resultIdx++;
+                    s->bar0[DATAOUT/4] = samplesInOut[resultIdx];
+                    resultIdx++;
                 }
 
                 // Feedback
-                if (s->resultIdx == s->nSamples / 2)
-                    printf("All %0d samples downloaded, empty", s->nSamples / 2);
+                if (resultIdx == nSamples / 2)
+                    printf("All %0d samples downloaded, empty", nSamples / 2);
             }
         }
         else if (value & PRC_FIELD)
@@ -317,12 +315,12 @@ static void pcifftdev_bar0_mmio_write(void *opaque, hwaddr offset, uint64_t valu
         if (s->bar0[CTRL/4] & EN_FIELD)
         {
             // Enabled, reset download counter
-            s->resultIdx = 0;
+            resultIdx = 0;
         }
         else
         {
             // Reset upload counter
-            s->sampleIdx = 0;
+            sampleIdx = 0;
 
             // Set status register
             s->bar0[STATUS/4] = s->bar0[STATUS/4] | READY_FIELD;
@@ -334,7 +332,7 @@ static void pcifftdev_bar0_mmio_write(void *opaque, hwaddr offset, uint64_t valu
         s->bar0[CFG0/4] = (int)value;
 
         // Set samples count
-        s->nSamples = (uint16_t)pow(2, (double)(((s->bar0[CFG0/4] & NSAMPLES_MASK) >> NSAMPLES_SH) + 4));
+        nSamples = (uint16_t)pow(2, (double)(((s->bar0[CFG0/4] & NSAMPLES_MASK) >> NSAMPLES_SH) + 4));
         break;
 
     case DATAIN:
