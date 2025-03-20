@@ -28,6 +28,7 @@ int main() {
     int ret;
     u32 value;
 
+    printf("Opening the device file.\n");
     // Open the device file
     fd = open(DEVICE_PATH, O_RDWR);
     if (fd < 0) {
