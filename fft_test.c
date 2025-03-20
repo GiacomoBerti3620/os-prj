@@ -1,69 +1,74 @@
 #include <stdio.h>
-#include <fcntl.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 
-#define DEVICE_PATH "/dev/virt_fft_acc"
-#define VIRT_FFT_IOCTL_RESET _IO('V', 1)
-#define VIRT_FFT_IOCTL_CONFIGURE _IOW('V', 2, uint32_t)
-#define VIRT_FFT_IOCTL_LOAD_SAMPLE _IOW('V', 3, uint32_t)
-#define VIRT_FFT_IOCTL_PROCESS _IO('V', 4)
-#define VIRT_FFT_IOCTL_READ_RESULT _IOR('V', 5, uint32_t)
+int main(int argc, char **argv)
+{
+	int fd;
+	void *bar0;
+	uint32_t width, offset;
+	uint64_t value;
 
-int main() {
-    int fd = open(DEVICE_PATH, O_RDWR);
-    if (fd < 0) {
-        perror("Failed to open the device");
-        return -1;
-    }
+	if((argc != 4) && (argc != 5)) {
+		printf("Usage: %s <devfile> <access_width> <offset> [<value>]\n", argv[0]);
+		return 0;
+	}
 
-    // Reset the accelerator
-    if (ioctl(fd, VIRT_FFT_IOCTL_RESET) < 0) {
-        perror("Failed to reset the accelerator");
-        close(fd);
-        return -1;
-    }
-    printf("Accelerator reset successfully\n");
+	fd = open(argv[1], O_RDWR);
+	if(fd < 0) {
+		perror("open");
+		return -1;
+	}
 
-    // Configure the device (example: set SMODE to 0 for 32-bit samples)
-    uint32_t cfg_value = 0x0; // SMODE = 0, NSAMPLES = default
-    if (ioctl(fd, VIRT_FFT_IOCTL_CONFIGURE, &cfg_value) < 0) {
-        perror("Failed to configure the device");
-        close(fd);
-        return -1;
-    }
-    printf("Device configured successfully\n");
+	bar1 = mmap(0, 32, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 
-    // Load samples (example: load 3 samples)
-    uint32_t samples[] = {0x12345678, 0x9ABCDEF0, 0x13579BDF};
-    for (int i = 0; i < 3; i++) {
-        if (ioctl(fd, VIRT_FFT_IOCTL_LOAD_SAMPLE, &samples[i]) < 0) {
-            perror("Failed to load sample");
-            close(fd);
-            return -1;
-        }
-        printf("Sample %d loaded successfully\n", i + 1);
-    }
+	width = strtol(argv[2], 0, 0);
+	offset = strtol(argv[3], 0, 0);
 
-    // Process the samples
-    if (ioctl(fd, VIRT_FFT_IOCTL_PROCESS) < 0) {
-        perror("Failed to process samples");
-        close(fd);
-        return -1;
-    }
-    printf("Samples processed successfully\n");
+	if(argc == 4) {
+		/* REad */
+		if(width == 8) {
+			uint8_t *ptr = (uint8_t *) (bar1 + offset);
+			printf("0x%x\n", *ptr);
+		}
+		if(width == 16) {
+			uint16_t *ptr = (uint16_t *) (bar1 + offset);
+			printf("0x%x\n", *ptr);
+		}
+		if(width == 32) {
+			uint32_t *ptr = (uint32_t *) (bar1 + offset);
+			printf("0x%x\n", *ptr);
+		}
+		if(width == 64) {
+			uint64_t *ptr = (uint64_t *) (bar1 + offset);
+			printf("0x%llx\n", *ptr);
+		}
+	} else if(argc == 5) {
+		value = (uint64_t) strtoll(argv[4], 0, 0);
+		/* Write */
+		if(width == 8) {
+			uint8_t *ptr = (uint8_t *) (bar1 + offset);
+			*ptr = value;
+		}
+		if(width == 16) {
+			uint16_t *ptr = (uint16_t *) (bar1 + offset);
+			*ptr = value;
+		}
+		if(width == 32) {
+			uint32_t *ptr = (uint32_t *) (bar1 + offset);
+			*ptr = value;
+		}
+		if(width == 64) {
+			uint64_t *ptr = (uint64_t *) (bar1 + offset);
+			*ptr = value;
+		}
+	}
 
-    // Read the results
-    uint32_t result;
-    for (int i = 0; i < 3; i++) {
-        if (ioctl(fd, VIRT_FFT_IOCTL_READ_RESULT, &result) < 0) {
-            perror("Failed to read result");
-            close(fd);
-            return -1;
-        }
-        printf("Result %d: 0x%x\n", i + 1, result);
-    }
-
-    close(fd);
-    return 0;
+	munmap(bar0, 32);
+	close(fd);
+	return 0;
 }
