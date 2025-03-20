@@ -56,7 +56,7 @@ static int fft_acc_mmap(struct file *file, struct vm_area_struct *vma)
 static long int fft_acc_ioctl(struct file *file, unsigned cmd, unsigned long arg)
 {
     struct fft_accdev *fft_acc = &mydev;
-    u32 val, val_buff;
+    u32 val;
 
     switch (cmd)
     {
@@ -124,7 +124,7 @@ static int fft_acc_probe(struct pci_dev *pdev, const struct pci_device_id *id)
     if (!ptr_bar0)
     {
         printk("fft_acc_drv - Error mapping BAR0\n");
-        return -ENODEV
+        return -ENODEV;
     }
 
     return 0;
@@ -153,8 +153,6 @@ static int __init fft_acc_init(void)
         printk("fft_acc_drv - Error registering Device numbers\n");
         return status;
     }
-
-    mutex_init(&lock);
 
     status = pci_register_driver(&fft_acc_driver);
     if (status < 0)
